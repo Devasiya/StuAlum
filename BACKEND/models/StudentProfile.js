@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 
 const StudentProfileSchema = new mongoose.Schema({
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-  college_id: { type: mongoose.Schema.Types.ObjectId, ref: 'College', required: true },
   full_name: { type: String, required: true },
   enrollment_number: { type: String, required: true, unique: true },
   course: { type: String, required: true },
