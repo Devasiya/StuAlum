@@ -16,7 +16,7 @@ import Footer from '../components/Footer';
 const SIDEBAR_WIDTH = 240;
 
 const Home = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="flex bg-[#111019] min-h-screen">
