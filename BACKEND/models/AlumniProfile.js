@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const AlumniProfileSchema = new mongoose.Schema({
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-  college_id: { type: mongoose.Schema.Types.ObjectId, ref: 'College', required: true },
+  college_id: { type: String, ref: 'College', required: false },
   full_name: { type: String, required: true },
   graduation_year: { type: Number, required: true },
   degree: { type: String },
@@ -17,7 +17,7 @@ const AlumniProfileSchema = new mongoose.Schema({
   linkedin_url: { type: String },
   github_url: { type: String },
   leetcode_url: { type: String },
-  contribution_preferences: { type: String },
+  contribution_preferences: { type: [String] },
   about_me: { type: String },
   profile_photo_url: { type: String },
   contact_number: { type: String },
