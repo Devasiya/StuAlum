@@ -5,7 +5,7 @@ const events = [
     title: 'AI in Industry: Future Trends',
     date: 'October 26, 2024 - 2:00 PM EST',
     description: 'Join leading experts to explore the latest advancements and trends in AI for industry.',
-    image: 'https://images.unsplash.com/photo-1468600201329-4c58262ce0ad?auto=format&fit=crop&w=400&q=80', // Replace with your event image URL
+    image: '/AI Trends 2025 banner.webp', // Replace with your event image URL
     link: '#',
   },
   {
@@ -19,7 +19,7 @@ const events = [
     title: 'Networking Mixer: Tech & Finance',
     date: 'December 5, 2024 - 6:30 PM GMT',
     description: 'Connect with alumni working in the tech and finance sectors. Expand your professional network.',
-    image: 'https://images.unsplash.com/photo-1485218129697-190e7b6a3afb?auto=format&fit=crop&w=400&q=80', // Replace with your event image URL
+    image: '/modern.webp', // Replace with your event image URL
     link: '#',
   },
 ];

@@ -1,6 +1,6 @@
-// Sidebar.jsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+
 
 const menuItems = [
   {
@@ -223,16 +223,19 @@ const menuItems = [
   },
 ];
 
+
 const Sidebar = ({ onLogoClick }) => {
   const navigate = useNavigate();
+
 
   return (
     <aside className="fixed top-0 left-0 h-screen w-60 bg-[#1A1D26] text-white flex flex-col z-50 shadow-lg transition-all duration-300">
       <div
-        className="py-4 pl-8 flex items-center font-cursive font-bold text-2xl text-purple-400 cursor-pointer select-none"
+        className="py-4 pl-8 flex items-center cursor-pointer select-none"
         onClick={onLogoClick}
       >
-        <span className="text-3xl mr-2">*</span> StuAlum
+        <img src="/logo.png" alt="Logo" className="h-10 w-auto mr-3" />
+        <span className="text-xl font-bold tracking-wide text-purple-400">RECONNECT</span>
       </div>
       <nav className="flex-1 overflow-y-auto">
         <ul className="list-none p-0 m-0">
@@ -240,7 +243,7 @@ const Sidebar = ({ onLogoClick }) => {
             <li
               key={item.label}
               onClick={() => navigate(item.route)}
-              className="flex items-center pl-8 py-4 cursor-pointer font-normal hover:bg-white/10 transition"
+              className="flex items-center pl-8 py-4 cursor-pointer font-normal hover:bg-white/10 transition relative"
               tabIndex={0}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') navigate(item.route);
@@ -262,5 +265,6 @@ const Sidebar = ({ onLogoClick }) => {
     </aside>
   );
 };
+
 
 export default Sidebar;

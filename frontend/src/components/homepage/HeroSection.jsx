@@ -65,7 +65,8 @@ const HeroSection = () => (
               cursor: 'pointer',
               boxShadow: '0px 1px 6px rgba(50, 48, 63, 0.05)',
             }}
-          >Find a Mentor
+          >
+            Find a Mentor
           </button>
           <button
             style={{
@@ -79,17 +80,20 @@ const HeroSection = () => (
               marginLeft: 8,
               cursor: 'pointer',
             }}
-          >Explore Alumni
+          >
+            Explore Alumni
           </button>
         </div>
       </div>
       <div style={{ flex: 1, textAlign: 'right' }}>
-        <img
-          src="/your-hero-image-path.jpg"
-          alt="Community Gathering"
+        <video
+          src="/Hero_Sec.mp4"
+          autoPlay
+          loop
+          muted
           style={{
             borderRadius: 12,
-            width: '350px',
+            width: '500px',        // Increased width
             maxWidth: '100%',
             background: '#222',
             objectFit: 'cover',

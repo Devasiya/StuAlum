@@ -5,25 +5,25 @@ const alumni = [
     name: 'Dr. Anya Sharma',
     title: 'Head of AI Research, Tech Innovations',
     skills: ['AI Development', 'Machine Learning', 'Leadership', 'Data Science'],
-    image: 'https://via.placeholder.com/80?text=Anya',
+    image: '/Anya-Sharma-Web-Profile.webp',
   },
   {
     name: 'Mr. David Lee',
     title: 'Senior Software Engineer, Google',
     skills: ['Frontend Development', 'React', 'Cloud Computing', 'UI/UX'],
-    image: 'https://via.placeholder.com/80?text=David',
+    image: '/Mr. David Lee.webp',
   },
   {
     name: 'Ms. Emily Chen',
     title: 'Product Manager, Microsoft',
     skills: ['Product Strategy', 'Market Analysis', 'Agile Methodologies', 'Leadership'],
-    image: 'https://via.placeholder.com/80?text=Emily',
+    image: '/Ms. Emily Chen.png',
   },
   {
     name: 'Mr. Mark Johnson',
     title: 'Founder & CEO, InnovateX',
     skills: ['Entrepreneurship', 'Venture Capital', 'Business Development', 'Strategy'],
-    image: 'https://via.placeholder.com/80?text=Mark',
+    image: '/Mr. Mark Johnson.png',
   },
 ];
 
@@ -70,7 +70,6 @@ const AlumniNetwork = () => (
             ))}
           </div>
         </div>
-
       ))}
     </div>
   </section>

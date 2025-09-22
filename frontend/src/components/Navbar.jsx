@@ -50,7 +50,7 @@ const Navbar = ({ onSidebarToggle, sidebarOpen }) => (
       <button className="bg-[#2d223f] hover:bg-[#3b2e58] text-white px-5 py-2 rounded-md font-semibold transition">
         login
       </button>
-      <div className="w-9 h-9 rounded-full bg-gray-400" />
+      
     </div>
   </header>
 );

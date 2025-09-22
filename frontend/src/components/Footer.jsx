@@ -1,4 +1,3 @@
-// Footer.jsx
 import React from 'react';
 
 const socialIcons = [
@@ -38,11 +37,11 @@ const socialIcons = [
 
 const Footer = () => (
   <footer className="bg-black text-gray-200 pt-8 pb-4 w-full">
-    <div className="w-full mx-auto px-8 flex flex-col md:flex-row justify-between items-start">
+    <div className="w-full px-8 mt-10 flex flex-col md:flex-row justify-between items-start">
       <div className="md:w-5/12 mb-7 md:mb-0">
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-purple-400 text-3xl font-cursive font-bold">*</span>
-          <span className="text-purple-400 text-3xl font-cursive font-bold">logo</span>
+          <img src="/logo.png" alt="Reconnect Logo" className="h-10 w-10" />
+          <span className="text-purple-400 text-3xl font-cursive font-bold">RECONNECT</span>
         </div>
         <p className="mb-3 text-sm">
           Fostering connections, learning, and growth
