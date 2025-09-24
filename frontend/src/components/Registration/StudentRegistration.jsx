@@ -60,12 +60,15 @@ const StudentRegistration = () => {
     college: "",
     enrollment: "",
     verificationFile: null,
+    photo: null,
+    address: "",
     course: "",
     year: "",
+    yearOfAdmission: "",
+    yearOfGraduation: "",
     skills: [],
     careerGoal: "",
     hearAbout: "",
-    purposes: [],
     mentorshipArea: "",
     mentorType: "",
     communication: [],
@@ -77,13 +80,13 @@ const StudentRegistration = () => {
     },
     discoveryInsights: "",
     preferences: "",
+    linkedinUrl: "",
+    githubUrl: "",
+    extracurricular: "",
   });
 
   const passwordValid = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(formData.password);
   const confirmPasswordValid = formData.password === formData.confirmPassword;
-
-  const yearMap = { "1st": 1, "2nd": 2, "3rd": 3, "4th": 4 };
-  const yearNumber = yearMap[formData.year] || null;
 
   const isStepValid = () => {
     switch (step) {
@@ -98,9 +101,22 @@ const StudentRegistration = () => {
           confirmPasswordValid
         );
       case 1:
-        return formData.college && formData.enrollment.trim() && formData.verificationFile;
+        return (
+          formData.college &&
+          formData.enrollment.trim() &&
+          formData.verificationFile &&
+          formData.address.trim() &&
+          formData.photo
+        );
       case 2:
-        return formData.course && formData.year && formData.skills.length > 0 && formData.careerGoal;
+        return (
+          formData.course &&
+          formData.year &&
+          formData.skills.length > 0 &&
+          formData.careerGoal &&
+          formData.yearOfAdmission &&
+          formData.yearOfGraduation
+        );
       case 3:
         return formData.hearAbout && formData.mentorshipArea;
       case 4:
@@ -137,24 +153,27 @@ const StudentRegistration = () => {
   const handleSubmit = async () => {
     const mappedData = {
       full_name: formData.fullName,
+      enrollment_number: formData.enrollment,
       email: formData.email,
       password: formData.password,
-      contact_number: formData.phone,
       branch: formData.course,
-      year_of_admission: yearNumber,
-      year_of_graduation: yearNumber,
-      enrollment_number: formData.enrollment,
+      year_of_admission: formData.yearOfAdmission,
+      year_of_graduation: formData.yearOfGraduation,
+      contact_number: formData.phone,
+      address: formData.address,
       verificationFile: formData.verificationFile,
+      photo: formData.photo,
       skills: formData.skills,
       career_goal: formData.careerGoal,
-      hear_about: formData.hearAbout,
-      purposes: formData.purposes,
       mentorship_area: formData.mentorshipArea,
       mentor_type: formData.mentorType,
       communication: formData.communication,
       notifications: formData.notifications,
       discovery_insights: formData.hearAbout,
       preferences: formData.mentorshipArea,
+      linkedin_url: formData.linkedinUrl,
+      github_url: formData.githubUrl,
+      extracurricular: formData.extracurricular,
     };
 
     const formPayload = new FormData();
@@ -180,7 +199,6 @@ const StudentRegistration = () => {
       });
 
       const text = await res.text();
-
       let result = {};
       try {
         result = JSON.parse(text);
@@ -200,12 +218,15 @@ const StudentRegistration = () => {
           college: "",
           enrollment: "",
           verificationFile: null,
+          photo: null,
+          address: "",
           course: "",
           year: "",
+          yearOfAdmission: "",
+          yearOfGraduation: "",
           skills: [],
           careerGoal: "",
           hearAbout: "",
-          purposes: [],
           mentorshipArea: "",
           mentorType: "",
           communication: [],
@@ -217,6 +238,9 @@ const StudentRegistration = () => {
           },
           discoveryInsights: "",
           preferences: "",
+          linkedinUrl: "",
+          githubUrl: "",
+          extracurricular: "",
         });
         navigate("/");
       } else {
@@ -234,7 +258,9 @@ const StudentRegistration = () => {
       <div className="flex justify-between mb-2">
         {steps.map((label, index) => (
           <div key={index} className="flex flex-col items-center">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${index <= step ? "bg-blue-600 text-white" : "bg-gray-300"}`}>
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center ${index <= step ? "bg-blue-600 text-white" : "bg-gray-300"}`}
+            >
               {index + 1}
             </div>
             <span className="text-xs mt-2">{label}</span>
@@ -320,7 +346,7 @@ const StudentRegistration = () => {
           <Select
             options={colleges}
             placeholder="Select College"
-            value={colleges.find(c => c.value === formData.college) || null}
+            value={colleges.find((c) => c.value === formData.college) || null}
             onChange={(sel) => setFormData({ ...formData, college: sel ? sel.value : "" })}
             className="mb-3"
             styles={selectStyles}
@@ -333,12 +359,49 @@ const StudentRegistration = () => {
             value={formData.enrollment}
             onChange={(e) => setFormData({ ...formData, enrollment: e.target.value })}
           />
+          <label className="block mb-1 font-semibold">Address</label>
+          <input
+            type="text"
+            placeholder="Address"
+            className="border p-2 w-full mb-3 rounded"
+            value={formData.address}
+            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+          />
+
+          {/* Photo upload */}
+          <label htmlFor="photoFile" className="block mb-1 font-semibold">
+            Photo (JPEG/PNG, Max 5MB)
+          </label>
+          <label className="flex items-center justify-center border-2 border-dashed border-green-400 rounded p-6 cursor-pointer hover:bg-green-50 mb-3">
+            <CloudArrowUpIcon className="h-10 w-10 text-green-500 mr-3" />
+            <span>Upload Photo</span>
+            <input
+              id="photoFile"
+              name="photo"
+              type="file"
+              accept=".jpg,.jpeg,.png"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (file && file.size <= 5 * 1024 * 1024) {
+                  setFormData({ ...formData, photo: file });
+                } else {
+                  alert("Photo size exceeds 5MB limit");
+                }
+              }}
+            />
+          </label>
+          {formData.photo && (
+            <p className="text-sm text-gray-700">Selected Photo: {formData.photo.name}</p>
+          )}
+
+          {/* Verification file upload */}
           <label htmlFor="verificationFile" className="block mb-1 font-semibold">
             Verification File
           </label>
           <label className="flex items-center justify-center border-2 border-dashed border-blue-400 rounded p-6 cursor-pointer hover:bg-blue-50 mb-3">
             <CloudArrowUpIcon className="h-10 w-10 text-blue-500 mr-3" />
-            <span>Upload File (Max 5MB, JPG/PNG/PDF)</span>
+            <span>Upload Verification Document (Max 5MB, JPG/PNG/PDF)</span>
             <input
               id="verificationFile"
               name="verificationFile"
@@ -368,7 +431,7 @@ const StudentRegistration = () => {
           <Select
             options={courses}
             placeholder="Select Course"
-            value={courses.find(c => c.value === formData.course) || null}
+            value={courses.find((c) => c.value === formData.course) || null}
             onChange={(sel) => setFormData({ ...formData, course: sel ? sel.value : "" })}
             className="mb-3"
             styles={selectStyles}
@@ -387,15 +450,47 @@ const StudentRegistration = () => {
             className="mb-3"
             styles={selectStyles}
           />
+          <label className="block mb-1 font-semibold">Year of Admission</label>
+          <select
+            className="border p-2 w-full mb-3 rounded"
+            value={formData.yearOfAdmission}
+            onChange={(e) => setFormData({ ...formData, yearOfAdmission: e.target.value })}
+          >
+            <option value="">Select Year of Admission</option>
+            {[...Array(10)].map((_, idx) => {
+              const year = 2025 - idx;
+              return (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              );
+            })}
+          </select>
+          <label className="block mb-1 font-semibold">Year of Graduation</label>
+          <select
+            className="border p-2 w-full mb-3 rounded"
+            value={formData.yearOfGraduation}
+            onChange={(e) => setFormData({ ...formData, yearOfGraduation: e.target.value })}
+          >
+            <option value="">Select Year of Graduation</option>
+            {[...Array(10)].map((_, idx) => {
+              const year = 2025 + idx;
+              return (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              );
+            })}
+          </select>
           <label className="block mb-1 font-semibold">Skills & Interests (max 10)</label>
           <Select
             options={skills}
             isMulti
             placeholder="Select Skills"
-            value={skills.filter(s => formData.skills.includes(s.value))}
+            value={skills.filter((s) => formData.skills.includes(s.value))}
             onChange={(options) => {
               if (options.length <= 10) {
-                setFormData({ ...formData, skills: options.map(o => o.value) });
+                setFormData({ ...formData, skills: options.map((o) => o.value) });
               } else {
                 alert("Maximum 10 skills allowed");
               }
@@ -407,10 +502,34 @@ const StudentRegistration = () => {
           <Select
             options={careerGoals}
             placeholder="Select Career Goal"
-            value={careerGoals.find(c => c.value === formData.careerGoal) || null}
+            value={careerGoals.find((c) => c.value === formData.careerGoal) || null}
             onChange={(sel) => setFormData({ ...formData, careerGoal: sel ? sel.value : "" })}
             className="mb-3"
             styles={selectStyles}
+          />
+          <label className="block mb-1 font-semibold">LinkedIn URL</label>
+          <input
+            type="url"
+            placeholder="https://linkedin.com/in/yourprofile"
+            className="border p-2 w-full mb-3 rounded"
+            value={formData.linkedinUrl}
+            onChange={(e) => setFormData({ ...formData, linkedinUrl: e.target.value })}
+          />
+          <label className="block mb-1 font-semibold">GitHub URL</label>
+          <input
+            type="url"
+            placeholder="https://github.com/yourprofile"
+            className="border p-2 w-full mb-3 rounded"
+            value={formData.githubUrl}
+            onChange={(e) => setFormData({ ...formData, githubUrl: e.target.value })}
+          />
+          <label className="block mb-1 font-semibold">Extracurricular Activities</label>
+          <textarea
+            placeholder="Describe your extracurricular activities"
+            className="border p-2 w-full mb-3 rounded"
+            value={formData.extracurricular}
+            onChange={(e) => setFormData({ ...formData, extracurricular: e.target.value })}
+            rows={3}
           />
         </div>
       )}
@@ -422,7 +541,7 @@ const StudentRegistration = () => {
           <Select
             options={hearAbout}
             placeholder="Select Option"
-            value={hearAbout.find(h => h.value === formData.hearAbout) || null}
+            value={hearAbout.find((h) => h.value === formData.hearAbout) || null}
             onChange={(sel) => setFormData({ ...formData, hearAbout: sel ? sel.value : "" })}
             className="mb-3"
             styles={selectStyles}
@@ -431,7 +550,7 @@ const StudentRegistration = () => {
           <Select
             options={mentorshipAreas}
             placeholder="Select Mentorship Area"
-            value={mentorshipAreas.find(m => m.value === formData.mentorshipArea) || null}
+            value={mentorshipAreas.find((m) => m.value === formData.mentorshipArea) || null}
             onChange={(sel) => setFormData({ ...formData, mentorshipArea: sel ? sel.value : "" })}
             className="mb-3"
             styles={selectStyles}
@@ -448,7 +567,7 @@ const StudentRegistration = () => {
           <Select
             options={mentorTypes}
             placeholder="Select Mentor Type"
-            value={mentorTypes.find(m => m.value === formData.mentorType) || null}
+            value={mentorTypes.find((m) => m.value === formData.mentorType) || null}
             onChange={(sel) => setFormData({ ...formData, mentorType: sel ? sel.value : "" })}
             className="mb-3"
             styles={selectStyles}
@@ -469,7 +588,10 @@ const StudentRegistration = () => {
                     if (e.target.checked) {
                       setFormData({ ...formData, communication: [...formData.communication, val] });
                     } else {
-                      setFormData({ ...formData, communication: formData.communication.filter(c => c !== val) });
+                      setFormData({
+                        ...formData,
+                        communication: formData.communication.filter((c) => c !== val),
+                      });
                     }
                   }}
                   className="h-4 w-4"
@@ -522,6 +644,8 @@ const StudentRegistration = () => {
             <h4 className="font-semibold mb-2">Verification</h4>
             <p><strong>College:</strong> {formData.college}</p>
             <p><strong>Enrollment Number:</strong> {formData.enrollment}</p>
+            <p><strong>Address:</strong> {formData.address}</p>
+            <p><strong>Photo:</strong> {formData.photo ? formData.photo.name : "Not uploaded"}</p>
             <p><strong>Verification File:</strong> {formData.verificationFile ? formData.verificationFile.name : "Not uploaded"}</p>
           </div>
 
@@ -529,8 +653,13 @@ const StudentRegistration = () => {
             <h4 className="font-semibold mb-2">Profile Details</h4>
             <p><strong>Branch:</strong> {formData.course}</p>
             <p><strong>Year:</strong> {formData.year}</p>
+            <p><strong>Year of Admission:</strong> {formData.yearOfAdmission}</p>
+            <p><strong>Year of Graduation:</strong> {formData.yearOfGraduation}</p>
             <p><strong>Skills:</strong> {formData.skills.length ? formData.skills.join(", ") : "None"}</p>
             <p><strong>Career Goal:</strong> {formData.careerGoal}</p>
+            <p><strong>LinkedIn URL:</strong> {formData.linkedinUrl || "None"}</p>
+            <p><strong>GitHub URL:</strong> {formData.githubUrl || "None"}</p>
+            <p><strong>Extracurricular Activities:</strong> {formData.extracurricular || "None"}</p>
           </div>
 
           <div className="bg-gray-100 p-4 rounded mb-3">
@@ -566,9 +695,7 @@ const StudentRegistration = () => {
       {/* Navigation */}
       <div className="flex justify-between mt-6">
         {step > 0 && (
-          <button onClick={() => setStep(step - 1)} className="px-4 py-2 bg-gray-300 rounded">
-            Back
-          </button>
+          <button onClick={() => setStep(step - 1)} className="px-4 py-2 bg-gray-300 rounded">Back</button>
         )}
         {step < steps.length - 1 && (
           <button

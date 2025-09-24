@@ -13,21 +13,21 @@ const Login = () => {
   const [error, setError] = useState("");
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    try {
-      const res = await axios.post("/api/auth/login", formData);
-      // You can store the token in localStorage or context if needed
-      // localStorage.setItem('token', res.data.token);
-      alert("Logged in successfully!");
-      // navigate to dashboard or home
-    } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+  e.preventDefault();
+  setLoading(true);
+  setError("");
+  try {
+    const res = await axios.post("/login/student", formData);
+    localStorage.setItem("token", res.data.token);
+    alert("Logged in successfully!");
+    navigate("/"); 
+  } catch (err) {
+    setError(err.response?.data?.message || "Login failed");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -64,28 +64,14 @@ const Login = () => {
         </form>
 
         {/* Not Registered */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">Not registered yet?</p>
-          <div className="flex justify-center space-x-3 mt-3">
-            <button
-              onClick={() => navigate("/student-register")}
-              className="px-3 py-1 bg-gray-200 rounded-lg hover:bg-gray-300"
-            >
-              Student
-            </button>
-            <button
-              onClick={() => navigate("/alumni-register")}
-              className="px-3 py-1 bg-gray-200 rounded-lg hover:bg-gray-300"
-            >
-              Alumni
-            </button>
-            <button
-              onClick={() => navigate("/admin-register")}
-              className="px-3 py-1 bg-gray-200 rounded-lg hover:bg-gray-300"
-            >
-              Admin
-            </button>
-          </div>
+        <div className="mt-6 text-center text-sm text-gray-600">
+          Not registered yet?{" "}
+          <span
+            onClick={() => navigate("/signup/student")}
+            className="text-blue-600 hover:underline cursor-pointer"
+          >
+            Click here
+          </span>
         </div>
       </div>
     </div>

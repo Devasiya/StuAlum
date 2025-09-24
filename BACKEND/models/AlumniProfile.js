@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
 const AlumniProfileSchema = new mongoose.Schema({
-  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
   college_id: { type: String, ref: 'College', required: false },
   full_name: { type: String, required: true },
   graduation_year: { type: Number, required: true },

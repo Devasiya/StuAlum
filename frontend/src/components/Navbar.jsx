@@ -5,11 +5,14 @@ const SIDEBAR_WIDTH = 240;
 
 const Navbar = ({ onSidebarToggle, sidebarOpen }) => {
   const [showSignupDropdown, setShowSignupDropdown] = useState(false);
+  const [showLoginDropdown, setShowLoginDropdown] = useState(false);
   const navigate = useNavigate();
-  const dropdownRef = useRef(null);
+  const signupDropdownRef = useRef(null);
+  const loginDropdownRef = useRef(null);
 
   const handleSignupClick = () => {
     setShowSignupDropdown((prev) => !prev);
+    setShowLoginDropdown(false);
   };
 
   const handleSignupOptionClick = (role) => {
@@ -18,14 +21,24 @@ const Navbar = ({ onSidebarToggle, sidebarOpen }) => {
   };
 
   const handleLoginClick = () => {
-    navigate('/login');
+    setShowLoginDropdown((prev) => !prev);
+    setShowSignupDropdown(false);
   };
 
-  // Close dropdown if click outside
+  const handleLoginOptionClick = (role) => {
+    setShowLoginDropdown(false);
+    navigate(`/login/${role.toLowerCase()}`);
+  };
+
+  // Close dropdowns if click outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      if (
+        (signupDropdownRef.current && !signupDropdownRef.current.contains(event.target)) &&
+        (loginDropdownRef.current && !loginDropdownRef.current.contains(event.target))
+      ) {
         setShowSignupDropdown(false);
+        setShowLoginDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -88,41 +101,71 @@ const Navbar = ({ onSidebarToggle, sidebarOpen }) => {
         <span className="cursor-pointer hover:text-purple-400 transition">Chat</span>
       </div>
 
-      <div className="flex items-center space-x-4 ml-8 relative" ref={dropdownRef}>
-        <button
-          onClick={handleSignupClick}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-md font-semibold transition relative"
-        >
-          Signup
-        </button>
-        {showSignupDropdown && (
-          <div className="absolute right-0 mt-25 w-40 bg-[#23232b] rounded-md shadow-lg text-white text-sm z-50">
-            <button
-              className="block w-full text-left px-4 py-2 hover:bg-purple-600 transition"
-              onClick={() => handleSignupOptionClick('Student')}
-            >
-              Student
-            </button>
-            <button
-              className="block w-full text-left px-4 py-2 hover:bg-purple-600 transition"
-              onClick={() => handleSignupOptionClick('Alumni')}
-            >
-              Alumni
-            </button>
-            <button
-              className="block w-full text-left px-4 py-2 hover:bg-purple-600 transition"
-              onClick={() => handleSignupOptionClick('Admin')}
-            >
-              Admin
-            </button>
-          </div>
-        )}
-        <button
-          onClick={handleLoginClick}
-          className="bg-[#2d223f] hover:bg-[#3b2e58] text-white px-5 py-2 rounded-md font-semibold transition"
-        >
-          login
-        </button>
+      <div className="flex items-center space-x-4 ml-8 relative">
+        {/* Signup Dropdown */}
+        <div ref={signupDropdownRef} className="relative">
+          <button
+            onClick={handleSignupClick}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-md font-semibold transition relative"
+          >
+            Signup
+          </button>
+          {showSignupDropdown && (
+            <div className="absolute right-0 mt-10 w-40 bg-[#23232b] rounded-md shadow-lg text-white text-sm z-50">
+              <button
+                className="block w-full text-left px-4 py-2 hover:bg-purple-600 transition"
+                onClick={() => handleSignupOptionClick('Student')}
+              >
+                Student
+              </button>
+              <button
+                className="block w-full text-left px-4 py-2 hover:bg-purple-600 transition"
+                onClick={() => handleSignupOptionClick('Alumni')}
+              >
+                Alumni
+              </button>
+              <button
+                className="block w-full text-left px-4 py-2 hover:bg-purple-600 transition"
+                onClick={() => handleSignupOptionClick('Admin')}
+              >
+                Admin
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Login Dropdown */}
+        <div ref={loginDropdownRef} className="relative">
+          <button
+            onClick={handleLoginClick}
+            className="bg-[#2d223f] hover:bg-[#3b2e58] text-white px-5 py-2 rounded-md font-semibold transition ml-3"
+          >
+            Login
+          </button>
+          {showLoginDropdown && (
+            <div className="absolute right-0 mt-10 w-40 bg-[#23232b] rounded-md shadow-lg text-white text-sm z-50">
+              <button
+                className="block w-full text-left px-4 py-2 hover:bg-purple-600 transition"
+                onClick={() => handleLoginOptionClick('Student')}
+              >
+                Student
+              </button>
+              <button
+                className="block w-full text-left px-4 py-2 hover:bg-purple-600 transition"
+                onClick={() => handleLoginOptionClick('Alumni')}
+              >
+                Alumni
+              </button>
+              <button
+                className="block w-full text-left px-4 py-2 hover:bg-purple-600 transition"
+                onClick={() => handleLoginOptionClick('Admin')}
+              >
+                Admin
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="w-9 h-9 rounded-full bg-gray-400" />
       </div>
     </header>

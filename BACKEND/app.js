@@ -3,6 +3,8 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const multer = require('multer');
 const path = require('path');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const app = express();
@@ -69,17 +71,24 @@ app.post('/api/alumni/register', upload.fields([
   }
 });
 
-// Student Registration route
-app.post('/api/student/register', upload.single('verificationFile'), async (req, res) => {
+//student registration
+app.post('/api/student/register', upload.fields([
+  { name: 'photo', maxCount: 1 },
+  { name: 'verificationFile', maxCount: 1 }
+]), async (req, res) => {
   try {
     const data = req.body;
 
-    if (req.file) {
-      data.photo = '/uploads/' + req.file.filename;  // or assign to `photo` field if applicable
+    if (req.files) {
+      if (req.files.photo && req.files.photo.length > 0) {
+        data.photo = '/uploads/' + req.files.photo[0].filename;
+      }
+      if (req.files.verificationFile && req.files.verificationFile.length > 0) {
+        data.verificationFile = '/uploads/' + req.files.verificationFile[0].filename;
+      }
     }
 
-    // Convert certain comma-separated strings to arrays if needed
-    ['skills', 'interests', 'purposes', 'communication'].forEach(field => {
+    ['skills', 'interests', 'communication'].forEach(field => {
       if (data[field]) {
         if (typeof data[field] === 'string') {
           try {
@@ -106,12 +115,18 @@ app.post('/api/student/register', upload.single('verificationFile'), async (req,
       }
     }
 
-    // Build new student profile object, explicitly mapping all expected fields
+    if (data.password) {
+      data.password = await bcrypt.hash(data.password, 10);
+    } else {
+      return res.status(400).json({ error: "Password is required" });
+    }
+
     const newStudentData = {
       full_name: data.full_name,
+      email: data.email,
+      password: data.password,
       enrollment_number: data.enrollment_number,
       branch: data.branch,
-      course: data.course,
       year_of_admission: data.year_of_admission ? Number(data.year_of_admission) : undefined,
       year_of_graduation: data.year_of_graduation ? Number(data.year_of_graduation) : undefined,
       contact_number: data.contact_number,
@@ -122,11 +137,16 @@ app.post('/api/student/register', upload.single('verificationFile'), async (req,
       discovery_insights: data.discovery_insights,
       preferences: data.preferences,
       photo: data.photo,
-      linkedin: data.linkedin,
-      github: data.github,
-      portfolio: data.portfolio,
-      extracuriculum: data.extracuriculum,
-      is_verified: false,  // default
+      verificationFile: data.verificationFile,
+      linkedin: data.linkedin_url,
+      github: data.github_url,
+      extracurricular: data.extracurricular,
+      is_verified: false,
+      notifications: data.notifications,
+      mentorship_area: data.mentorship_area,
+      mentor_type: data.mentor_type,
+      communication: data.communication,
+      hear_about: data.hear_about,
     };
 
     const newStudent = new StudentProfile(newStudentData);
@@ -138,6 +158,7 @@ app.post('/api/student/register', upload.single('verificationFile'), async (req,
     res.status(500).json({ error: error.message || 'Server error' });
   }
 });
+
 
 
 // Admin Registration route
@@ -168,6 +189,41 @@ app.post('/api/admin/register', async (req, res) => {
     res.status(500).json({ error: error.message || 'Server error' });
   }
 });
+
+//Login Student
+app.post('/login/student', async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Find student by email (assuming email is stored in StudentProfile)
+    const user = await StudentProfile.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Compare password with hashed password stored
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
+
+    // Create JWT token
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'your_jwt_secret', {
+      expiresIn: '1h',
+    });
+
+    // Return token and user info (excluding sensitive data)
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        full_name: user.full_name,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
 
 
 app.get('/', (req, res) => res.send('Hello World!'));
