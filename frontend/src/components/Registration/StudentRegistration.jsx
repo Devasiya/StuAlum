@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import Select from "react-select";
+import { useNavigate } from "react-router-dom";
 import { CloudArrowUpIcon } from "@heroicons/react/24/outline";
 
 import { colleges, courses, careerGoals, skills, hearAbout, mentorTypes, mentorshipAreas } from "../../assets/assets";
@@ -47,6 +48,8 @@ const selectStyles = {
 };
 
 const StudentRegistration = () => {
+  const navigate = useNavigate();
+
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState({
     fullName: "",
@@ -72,14 +75,13 @@ const StudentRegistration = () => {
       community: false,
       content: true,
     },
-     discoveryInsights: "",  // for discovery_insights
+    discoveryInsights: "",
     preferences: "",
   });
 
   const passwordValid = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(formData.password);
   const confirmPasswordValid = formData.password === formData.confirmPassword;
 
-  // Map year strings to numbers for backend
   const yearMap = { "1st": 1, "2nd": 2, "3rd": 3, "4th": 4 };
   const yearNumber = yearMap[formData.year] || null;
 
@@ -151,6 +153,8 @@ const StudentRegistration = () => {
       mentor_type: formData.mentorType,
       communication: formData.communication,
       notifications: formData.notifications,
+      discovery_insights: formData.hearAbout,
+      preferences: formData.mentorshipArea,
     };
 
     const formPayload = new FormData();
@@ -211,7 +215,10 @@ const StudentRegistration = () => {
             community: false,
             content: true,
           },
+          discoveryInsights: "",
+          preferences: "",
         });
+        navigate("/");
       } else {
         alert("Failed to register student: " + (result.error || res.statusText));
       }
@@ -499,63 +506,62 @@ const StudentRegistration = () => {
         </div>
       )}
 
-      {/* Step 5 - Review & Submit */}
+      {/* Step 5 */}
       {step === 5 && (
-  <div>
-    <h3 className="text-lg font-semibold mb-4 text-center">Review & Submit</h3>
+        <div>
+          <h3 className="text-lg font-semibold mb-4 text-center">Review & Submit</h3>
 
-    <div className="bg-gray-100 p-4 rounded mb-3">
-      <h4 className="font-semibold mb-2">Basic Info</h4>
-      <p><strong>Name:</strong> {formData.fullName}</p>
-      <p><strong>Email:</strong> {formData.email}</p>
-      <p><strong>Phone:</strong> {formData.phone}</p>
-    </div>
+          <div className="bg-gray-100 p-4 rounded mb-3">
+            <h4 className="font-semibold mb-2">Basic Info</h4>
+            <p><strong>Name:</strong> {formData.fullName}</p>
+            <p><strong>Email:</strong> {formData.email}</p>
+            <p><strong>Phone:</strong> {formData.phone}</p>
+          </div>
 
-    <div className="bg-gray-100 p-4 rounded mb-3">
-      <h4 className="font-semibold mb-2">Verification</h4>
-      <p><strong>College:</strong> {formData.college}</p>
-      <p><strong>Enrollment Number:</strong> {formData.enrollment}</p>
-      <p><strong>Verification File:</strong> {formData.verificationFile ? formData.verificationFile.name : "Not uploaded"}</p>
-    </div>
+          <div className="bg-gray-100 p-4 rounded mb-3">
+            <h4 className="font-semibold mb-2">Verification</h4>
+            <p><strong>College:</strong> {formData.college}</p>
+            <p><strong>Enrollment Number:</strong> {formData.enrollment}</p>
+            <p><strong>Verification File:</strong> {formData.verificationFile ? formData.verificationFile.name : "Not uploaded"}</p>
+          </div>
 
-    <div className="bg-gray-100 p-4 rounded mb-3">
-      <h4 className="font-semibold mb-2">Profile Details</h4>
-      <p><strong>Branch:</strong> {formData.course}</p>
-      <p><strong>Year:</strong> {formData.year}</p>
-      <p><strong>Skills:</strong> {formData.skills.length ? formData.skills.join(", ") : "None"}</p>
-      <p><strong>Career Goal:</strong> {formData.careerGoal}</p>
-    </div>
+          <div className="bg-gray-100 p-4 rounded mb-3">
+            <h4 className="font-semibold mb-2">Profile Details</h4>
+            <p><strong>Branch:</strong> {formData.course}</p>
+            <p><strong>Year:</strong> {formData.year}</p>
+            <p><strong>Skills:</strong> {formData.skills.length ? formData.skills.join(", ") : "None"}</p>
+            <p><strong>Career Goal:</strong> {formData.careerGoal}</p>
+          </div>
 
-    <div className="bg-gray-100 p-4 rounded mb-3">
-      <h4 className="font-semibold mb-2">Discovery Insights</h4>
-      <p><strong>Heard About:</strong> {formData.hearAbout}</p>
-      <p><strong>Mentorship Area:</strong> {formData.mentorshipArea}</p>
-    </div>
+          <div className="bg-gray-100 p-4 rounded mb-3">
+            <h4 className="font-semibold mb-2">Discovery Insights</h4>
+            <p><strong>Heard About:</strong> {formData.hearAbout}</p>
+            <p><strong>Mentorship Area:</strong> {formData.mentorshipArea}</p>
+          </div>
 
-    <div className="bg-gray-100 p-4 rounded mb-3">
-      <h4 className="font-semibold mb-2">Preferences & Notifications</h4>
-      <p><strong>Mentor Type:</strong> {formData.mentorType}</p>
-      <p><strong>Communication:</strong> {formData.communication.length ? formData.communication.join(", ") : "None"}</p>
-      <p><strong>Notifications:</strong></p>
-      <ul className="list-disc pl-5">
-        <li>Mentorship Updates: {formData.notifications.mentorship ? "Yes" : "No"}</li>
-        <li>Event Notifications: {formData.notifications.events ? "Yes" : "No"}</li>
-        <li>Community Updates: {formData.notifications.community ? "Yes" : "No"}</li>
-        <li>Content Updates: {formData.notifications.content ? "Yes" : "No"}</li>
-      </ul>
-    </div>
+          <div className="bg-gray-100 p-4 rounded mb-3">
+            <h4 className="font-semibold mb-2">Preferences & Notifications</h4>
+            <p><strong>Mentor Type:</strong> {formData.mentorType}</p>
+            <p><strong>Communication:</strong> {formData.communication.length ? formData.communication.join(", ") : "None"}</p>
+            <p><strong>Notifications:</strong></p>
+            <ul className="list-disc pl-5">
+              <li>Mentorship Updates: {formData.notifications.mentorship ? "Yes" : "No"}</li>
+              <li>Event Notifications: {formData.notifications.events ? "Yes" : "No"}</li>
+              <li>Community Updates: {formData.notifications.community ? "Yes" : "No"}</li>
+              <li>Content Updates: {formData.notifications.content ? "Yes" : "No"}</li>
+            </ul>
+          </div>
 
-    <div className="text-center">
-      <button
-        onClick={handleSubmit}
-        className="px-8 py-3 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold mt-4"
-      >
-        Submit & Create Account
-      </button>
-    </div>
-  </div>
-)}
-
+          <div className="text-center">
+            <button
+              onClick={handleSubmit}
+              className="px-8 py-3 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold mt-4"
+            >
+              Submit & Create Account
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Navigation */}
       <div className="flex justify-between mt-6">
