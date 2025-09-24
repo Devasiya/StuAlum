@@ -242,7 +242,7 @@ const StudentRegistration = () => {
           githubUrl: "",
           extracurricular: "",
         });
-        navigate("/");
+        navigate("/login/student");
       } else {
         alert("Failed to register student: " + (result.error || res.statusText));
       }

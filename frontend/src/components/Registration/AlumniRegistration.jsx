@@ -175,7 +175,7 @@ const AlumniRegistration = () => {
 
       if (res.ok) {
         alert("Alumni registered successfully!");
-        navigate('/');
+        navigate('/login/alumni'); // Redirect to login page after successful signup
         return;
       } else {
         alert("Failed to register alumni: " + (result.error || res.statusText));
