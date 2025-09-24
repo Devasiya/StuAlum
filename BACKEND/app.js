@@ -33,6 +33,13 @@ const AlumniProfile = require('./models/AlumniProfile');
 const StudentProfile = require('./models/StudentProfile'); 
 const AdminProfile = require('./models/AdminProfile');
 
+//global logging middleware
+app.use((req, res, next) => {
+  console.log(`Incoming ${req.method} ${req.url}`);
+  next();
+});
+
+
 // Alumni Registration route
 app.post('/api/alumni/register', upload.fields([
   { name: 'verificationFile', maxCount: 1 },
@@ -250,6 +257,7 @@ app.post('/api/admin/register', async (req, res) => {
 
 //Login Student
 app.post('/login/student', async (req, res) => {
+  console.log('Login route hit');
   const { email, password } = req.body;
 
   try {
@@ -266,6 +274,10 @@ app.post('/login/student', async (req, res) => {
       expiresIn: '1h',
     });
 
+    console.log(req.body); // shows received email, password
+    console.log(user); // shows user object found
+
+
     // Return token and user info (excluding sensitive data)
     res.json({
       token,
@@ -281,6 +293,71 @@ app.post('/login/student', async (req, res) => {
   }
 });
 
+//Login Alumni
+app.post('/login/alumni', async (req, res) => {
+  console.log('Alumni login route hit');
+  const { email, password } = req.body;
+
+  try {
+    const user = await AlumniProfile.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'your_jwt_secret', {
+      expiresIn: '1h',
+    });
+
+    console.log(req.body);
+    console.log(user);
+
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        full_name: user.full_name,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    console.error('Alumni login error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+//Login Admin
+app.post('/login/admin', async (req, res) => {
+  console.log('Admin login route hit');
+  const { email, password } = req.body;
+
+  try {
+    const user = await AdminProfile.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'your_jwt_secret', {
+      expiresIn: '1h',
+    });
+
+    console.log(req.body);
+    console.log(user);
+
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        full_name: user.full_name,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    console.error('Admin login error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 
 
