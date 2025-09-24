@@ -123,7 +123,7 @@ const AdminRegistration = () => {
 
       if (res.ok) {
         alert("Admin registered successfully");
-        navigate("/"); // Redirect to home page after successful signup
+        navigate("/login/admin"); // Redirect to home page after successful signup
       } else {
         const err = await res.json();
         alert("Registration failed: " + err.error);
