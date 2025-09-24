@@ -41,27 +41,79 @@ app.post('/api/alumni/register', upload.fields([
   try {
     const data = req.body;
 
-    if (req.files['verificationFile']) {
-      data.verificationFilePath = '/uploads/' + req.files['verificationFile'][0].filename;
+    // Assign uploaded file paths to data keys matching schema
+    if (req.files['verificationFile'] && req.files['verificationFile'].length > 0) {
+      data.verificationFile = '/uploads/' + req.files['verificationFile'][0].filename;
     }
-    if (req.files['profile_photo_url']) {
+    if (req.files['profile_photo_url'] && req.files['profile_photo_url'].length > 0) {
       data.profile_photo_url = '/uploads/' + req.files['profile_photo_url'][0].filename;
     }
 
+    // Normalize string fields that should be arrays
     ['skills', 'contribution_preferences', 'communication'].forEach(field => {
-      if (typeof data[field] === 'string') {
-        data[field] = [data[field]];
+      if (data[field]) {
+        if (typeof data[field] === 'string') {
+          try {
+            // Try to parse as JSON array string
+            data[field] = JSON.parse(data[field]);
+          } catch {
+            // Fallback: treat as comma-separated string
+            data[field] = data[field].split(',').map(s => s.trim());
+          }
+        }
+      } else {
+        data[field] = [];
       }
     });
 
+    // Add user_id if missing
     if (!data.user_id) {
       data.user_id = new mongoose.Types.ObjectId();
     }
 
+    // Convert numerical fields properly
     if (data.graduation_year) data.graduation_year = Number(data.graduation_year);
     if (data.yearsOfExperience) data.yearsOfExperience = Number(data.yearsOfExperience);
 
-    const newAlumni = new AlumniProfile(data);
+    // Password hashing
+    if (data.password) {
+      data.password = await bcrypt.hash(data.password, 10);
+    } else {
+      return res.status(400).json({ error: "Password is required" });
+    }
+
+    // Build new AlumniProfile document using mapped data keys
+    const newAlumni = new AlumniProfile({
+      full_name: data.full_name,
+      email: data.email,
+      password: data.password,
+      contact_number: data.contact_number,
+      linkedin_url: data.linkedin_url,
+      github_url: data.github_url,
+      leetcode_url: data.leetcode_url,
+      college_id: data.college_id,
+      graduation_year: data.graduation_year,
+      verificationFile: data.verificationFile,
+      degree: data.degree,
+      current_position: data.current_position,
+      company: data.company,
+      industry: data.industry,
+      location: data.location,
+      years_of_experience: data.yearsOfExperience,
+      skills: data.skills,
+      professional_achievements: data.professional_achievements,
+      contribution_preferences: data.contribution_preferences,
+      preferred_communication: data.communication,
+      about_me: data.about_me,
+      profile_photo_url: data.profile_photo_url,
+      twitter: data.twitter,
+      portfolio: data.portfolio,
+      is_verified: false,
+      engagement_status: data.engagement_status || 'inactive',
+      prospect_type: data.prospect_type,
+      user_id: data.user_id,
+    });
+
     await newAlumni.save();
 
     res.status(201).json({ message: 'Alumni registered successfully' });
@@ -70,6 +122,7 @@ app.post('/api/alumni/register', upload.fields([
     res.status(500).json({ error: error.message || 'Server error' });
   }
 });
+
 
 //student registration
 app.post('/api/student/register', upload.fields([

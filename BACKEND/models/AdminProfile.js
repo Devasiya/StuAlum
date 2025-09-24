@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 
 const AdminProfileSchema = new mongoose.Schema({
   full_name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
   designation: { type: String },
   department: { type: String },
   contact_office: String,
