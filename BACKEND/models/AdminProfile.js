@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
 const AdminProfileSchema = new mongoose.Schema({
-  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
   full_name: { type: String, required: true },
   designation: { type: String },
   department: { type: String },

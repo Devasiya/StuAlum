@@ -28,7 +28,8 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 const AlumniProfile = require('./models/AlumniProfile');
-const StudentProfile = require('./models/StudentProfile'); // Add your StudentProfile model
+const StudentProfile = require('./models/StudentProfile'); 
+const AdminProfile = require('./models/AdminProfile');
 
 // Alumni Registration route
 app.post('/api/alumni/register', upload.fields([
@@ -138,6 +139,35 @@ app.post('/api/student/register', upload.single('verificationFile'), async (req,
   }
 });
 
+
+// Admin Registration route
+app.post('/api/admin/register', async (req, res) => {
+  try {
+    const data = req.body;
+
+    // You can add validation here if needed
+
+    const newAdmin = new AdminProfile({
+      full_name: data.full_name,
+      email: data.email,
+      password: data.password,   // Ideally hash this before saving
+      confirm_password: data.confirm_password,
+      designation: data.designation,
+      department: data.department,
+      contact_office: data.contact_office,
+      college: data.college,
+      admin_level: data.admin_level || "admin",
+      permissions: data.permissions || { edit_user: false, manage_events: false },
+    });
+
+    await newAdmin.save();
+
+    res.status(201).json({ message: 'Admin registered successfully' });
+  } catch (error) {
+    console.error('Error registering admin:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
 
 
 app.get('/', (req, res) => res.send('Hello World!'));
