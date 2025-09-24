@@ -220,6 +220,11 @@ app.post('/api/admin/register', async (req, res) => {
     const data = req.body;
 
     // You can add validation here if needed
+    if (data.password) {
+      data.password = await bcrypt.hash(data.password, 10);
+    } else {
+      return res.status(400).json({ error: "Password is required" });
+    }
 
     const newAdmin = new AdminProfile({
       full_name: data.full_name,
