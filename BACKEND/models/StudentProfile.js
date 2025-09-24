@@ -1,10 +1,8 @@
 const mongoose = require('mongoose');
 
 const StudentProfileSchema = new mongoose.Schema({
-  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
   full_name: { type: String, required: true },
   enrollment_number: { type: String, required: true, unique: true },
-  course: { type: String, required: true },
   branch: { type: String, required: true },
   year_of_admission: { type: Number, required: true },
   year_of_graduation: { type: Number, required: true },

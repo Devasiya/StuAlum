@@ -28,8 +28,9 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 const AlumniProfile = require('./models/AlumniProfile');
+const StudentProfile = require('./models/StudentProfile'); // Add your StudentProfile model
 
-
+// Alumni Registration route
 app.post('/api/alumni/register', upload.fields([
   { name: 'verificationFile', maxCount: 1 },
   { name: 'profile_photo_url', maxCount: 1 }
@@ -50,7 +51,6 @@ app.post('/api/alumni/register', upload.fields([
       }
     });
 
-    // Assign user_id if not provided - create new ObjectId to avoid duplicate null error
     if (!data.user_id) {
       data.user_id = new mongoose.Types.ObjectId();
     }
@@ -67,6 +67,79 @@ app.post('/api/alumni/register', upload.fields([
     res.status(500).json({ error: error.message || 'Server error' });
   }
 });
+
+// Student Registration route
+app.post('/api/student/register', upload.single('verificationFile'), async (req, res) => {
+  try {
+    const data = req.body;
+
+    if (req.file) {
+      data.photo = '/uploads/' + req.file.filename;  // or assign to `photo` field if applicable
+    }
+
+    // Convert certain comma-separated strings to arrays if needed
+    ['skills', 'interests', 'purposes', 'communication'].forEach(field => {
+      if (data[field]) {
+        if (typeof data[field] === 'string') {
+          try {
+            data[field] = JSON.parse(data[field]);
+          } catch {
+            data[field] = data[field].split(',').map(s => s.trim());
+          }
+        }
+      } else {
+        data[field] = [];
+      }
+    });
+
+    if (typeof data.notifications === 'string') {
+      try {
+        data.notifications = JSON.parse(data.notifications);
+      } catch {
+        data.notifications = {
+          mentorship: true,
+          events: true,
+          community: false,
+          content: true,
+        };
+      }
+    }
+
+    // Build new student profile object, explicitly mapping all expected fields
+    const newStudentData = {
+      full_name: data.full_name,
+      enrollment_number: data.enrollment_number,
+      branch: data.branch,
+      course: data.course,
+      year_of_admission: data.year_of_admission ? Number(data.year_of_admission) : undefined,
+      year_of_graduation: data.year_of_graduation ? Number(data.year_of_graduation) : undefined,
+      contact_number: data.contact_number,
+      address: data.address,
+      skills: data.skills,
+      interests: data.interests,
+      career_goals: data.career_goal,
+      discovery_insights: data.discovery_insights,
+      preferences: data.preferences,
+      photo: data.photo,
+      linkedin: data.linkedin,
+      github: data.github,
+      portfolio: data.portfolio,
+      extracuriculum: data.extracuriculum,
+      is_verified: false,  // default
+    };
+
+    const newStudent = new StudentProfile(newStudentData);
+    await newStudent.save();
+
+    res.status(201).json({ message: 'Student registered successfully' });
+  } catch (error) {
+    console.error('Error registering student:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
+
+
 app.get('/', (req, res) => res.send('Hello World!'));
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
