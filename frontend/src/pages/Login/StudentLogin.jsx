@@ -17,7 +17,8 @@ const Login = () => {
   setLoading(true);
   setError("");
   try {
-    const res = await axios.post("/login/student", formData);
+    const res = await axios.post('http://localhost:5000/login/student', formData);
+
     localStorage.setItem("token", res.data.token);
     alert("Logged in successfully!");
     navigate("/"); 
