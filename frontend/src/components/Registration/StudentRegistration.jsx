@@ -1,11 +1,50 @@
-import React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import Select from "react-select";
 import { CloudArrowUpIcon } from "@heroicons/react/24/outline";
 
+import { colleges, courses, careerGoals, skills, hearAbout, mentorTypes, mentorshipAreas } from "../../assets/assets";
 
-import { colleges, courses,careerGoals,skills,hearAbout,mentorTypes,mentorshipAreas} from "../../assets/assets";
-
+const selectStyles = {
+  menu: (provided) => ({
+    ...provided,
+    backgroundColor: "white",
+    color: "black",
+    border: "1.5px solid #3b82f6",
+    zIndex: 100,
+  }),
+  option: (provided, state) => ({
+    ...provided,
+    backgroundColor: state.isSelected ? "#3b82f6" : state.isFocused ? "#dbeafe" : "white",
+    color: state.isSelected ? "white" : "#1e3a8a",
+    fontWeight: state.isSelected ? "bold" : "normal",
+    fontSize: "1rem",
+  }),
+  control: (provided, state) => ({
+    ...provided,
+    backgroundColor: "white",
+    color: "black",
+    border: state.isFocused ? "2px solid #3b82f6" : "1.5px solid #3b82f6",
+    boxShadow: state.isFocused ? "0 0 0 2px #3b82f655" : provided.boxShadow,
+    fontWeight: "bold",
+    fontSize: "1rem",
+  }),
+  singleValue: (provided) => ({
+    ...provided,
+    color: "#1e3a8a",
+    fontWeight: "bold",
+  }),
+  multiValue: (provided) => ({
+    ...provided,
+    backgroundColor: "#dbeafe",
+    color: "#1e3a8a",
+    fontWeight: "bold",
+  }),
+  input: (provided) => ({
+    ...provided,
+    color: "#1e3a8a",
+    fontWeight: "bold",
+  }),
+};
 
 const StudentRegistration = () => {
   const [step, setStep] = useState(0);
@@ -33,361 +72,385 @@ const StudentRegistration = () => {
       community: false,
       content: true,
     },
+     discoveryInsights: "",  // for discovery_insights
+    preferences: "",
   });
-  // Validation for each step
-  // Password validation regex: at least one uppercase, one number, one special character, min 8 chars
-          const passwordValid = /^(?=.[A-Z])(?=.\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(formData.password);
-          const confirmPasswordValid = formData.password === formData.confirmPassword;
 
-          const isStepValid = () => {
-            switch (step) {
-              case 0:
-                return (
-                  formData.fullName.trim() &&
-                  formData.email.trim() &&
-                  formData.password.trim() &&
-                  formData.confirmPassword.trim() &&
-                  formData.phone.trim() &&
-                  passwordValid &&
-                  confirmPasswordValid
-                );
-              case 1:
-                return (
-                  formData.college &&
-                  formData.enrollment.trim() &&
-                  formData.verificationFile
-                );
-              case 2:
-                return (
-                  formData.course &&
-                  formData.year &&
-                  formData.skills.length > 0 &&
-                  formData.careerGoal
-                );
-              case 3:
-                return (
-                  formData.hearAbout &&
-                  formData.mentorshipArea
-                );
-              case 4:
-                return (
-                  formData.mentorType &&
-                  formData.communication.length > 0
-                );
-              default:
-                return true;
-            }
-          };
-          const steps = [
-            "Account Setup",
-            "Student Verification",
-            "Profile Details",
-            "Discovery Insights",
-            "Preferences & Notifications",
-            "Review & Submit",
-          ];
+  const passwordValid = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(formData.password);
+  const confirmPasswordValid = formData.password === formData.confirmPassword;
 
- 
+  // Map year strings to numbers for backend
+  const yearMap = { "1st": 1, "2nd": 2, "3rd": 3, "4th": 4 };
+  const yearNumber = yearMap[formData.year] || null;
 
-  const handleNext = () => setStep((prev) => prev + 1);
-  const handlePrev = () => setStep((prev) => prev - 1);
+  const isStepValid = () => {
+    switch (step) {
+      case 0:
+        return (
+          formData.fullName.trim() &&
+          formData.email.trim() &&
+          formData.password.trim() &&
+          formData.confirmPassword.trim() &&
+          formData.phone.trim() &&
+          passwordValid &&
+          confirmPasswordValid
+        );
+      case 1:
+        return formData.college && formData.enrollment.trim() && formData.verificationFile;
+      case 2:
+        return formData.course && formData.year && formData.skills.length > 0 && formData.careerGoal;
+      case 3:
+        return formData.hearAbout && formData.mentorshipArea;
+      case 4:
+        return formData.mentorType.trim() !== "" && formData.communication.length > 0;
+      default:
+        return true;
+    }
+  };
+
+  const steps = [
+    "Account Setup",
+    "Student Verification",
+    "Profile Details",
+    "Discovery Insights",
+    "Preferences & Notifications",
+    "Review & Submit",
+  ];
+
+  const handleChange = (e) => {
+    const { name, value, type, files, checked } = e.target;
+    if (type === "file") {
+      setFormData((prev) => ({ ...prev, [name]: files[0] }));
+    } else if (type === "checkbox" && name.startsWith("notifications")) {
+      const notifKey = name.split(".")[1];
+      setFormData((prev) => ({
+        ...prev,
+        notifications: { ...prev.notifications, [notifKey]: checked },
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleSubmit = async () => {
+    const mappedData = {
+      full_name: formData.fullName,
+      email: formData.email,
+      password: formData.password,
+      contact_number: formData.phone,
+      branch: formData.course,
+      year_of_admission: yearNumber,
+      year_of_graduation: yearNumber,
+      enrollment_number: formData.enrollment,
+      verificationFile: formData.verificationFile,
+      skills: formData.skills,
+      career_goal: formData.careerGoal,
+      hear_about: formData.hearAbout,
+      purposes: formData.purposes,
+      mentorship_area: formData.mentorshipArea,
+      mentor_type: formData.mentorType,
+      communication: formData.communication,
+      notifications: formData.notifications,
+    };
+
+    const formPayload = new FormData();
+    for (const key in mappedData) {
+      const val = mappedData[key];
+      if (Array.isArray(val)) {
+        val.forEach((item) => formPayload.append(key, item));
+      } else if (val instanceof File) {
+        formPayload.append(key, val);
+      } else if (typeof val === "object" && val !== null && key === "notifications") {
+        Object.entries(val).forEach(([notifKey, notifVal]) => {
+          formPayload.append(`notifications[${notifKey}]`, notifVal);
+        });
+      } else if (val !== undefined && val !== null) {
+        formPayload.append(key, val);
+      }
+    }
+
+    try {
+      const res = await fetch("http://localhost:5000/api/student/register", {
+        method: "POST",
+        body: formPayload,
+      });
+
+      const text = await res.text();
+
+      let result = {};
+      try {
+        result = JSON.parse(text);
+      } catch {
+        console.warn("Response is not valid JSON");
+      }
+
+      if (res.ok) {
+        alert("Student registered successfully!");
+        setStep(0);
+        setFormData({
+          fullName: "",
+          email: "",
+          password: "",
+          confirmPassword: "",
+          phone: "",
+          college: "",
+          enrollment: "",
+          verificationFile: null,
+          course: "",
+          year: "",
+          skills: [],
+          careerGoal: "",
+          hearAbout: "",
+          purposes: [],
+          mentorshipArea: "",
+          mentorType: "",
+          communication: [],
+          notifications: {
+            mentorship: true,
+            events: true,
+            community: false,
+            content: true,
+          },
+        });
+      } else {
+        alert("Failed to register student: " + (result.error || res.statusText));
+      }
+    } catch (err) {
+      console.error("Submission error:", err);
+      alert("Error submitting form. Please try again.");
+    }
+  };
 
   return (
     <div className="w-full max-w-3xl mx-auto p-6 bg-white rounded-xl shadow-lg">
       {/* Progress Steps */}
       <div className="flex justify-between mb-2">
-        {steps.map((s, i) => (
-          <div key={i} className="flex flex-col items-center">
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                i <= step ? "bg-blue-600 text-white" : "bg-gray-300"
-              }`}
-            >
-              {i + 1}
+        {steps.map((label, index) => (
+          <div key={index} className="flex flex-col items-center">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${index <= step ? "bg-blue-600 text-white" : "bg-gray-300"}`}>
+              {index + 1}
             </div>
-            <p className="text-xs mt-2">{s}</p>
+            <span className="text-xs mt-2">{label}</span>
           </div>
         ))}
       </div>
-      {/* Progress Line */}
+
+      {/* Progress Bar */}
       <div className="relative h-2 mb-6">
-        <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-300 rounded-full" style={{ transform: 'translateY(-50%)' }}></div>
+        <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-300 rounded-full" style={{ transform: "translateY(-50%)" }}></div>
         <div
           className="absolute top-1/2 left-0 h-1 bg-blue-600 rounded-full transition-all duration-300"
           style={{
-            width: ${(step / (steps.length - 1)) * 100}%,
-            transform: 'translateY(-50%)',
+            width: `${(step / (steps.length - 1)) * 100}%`,
+            transform: "translateY(-50%)",
           }}
         ></div>
       </div>
 
-      {/* Step Forms */}
+      {/* Step 0 */}
       {step === 0 && (
         <div className="border p-6 rounded-lg shadow-md">
-          <div className="w-full h-full text-center py-10 px-4 bg-purple-800 ">
-              <h2 className="text-4xl md:text-5xl font-bold text-white mb-3">
-                Start Your Journey with StuAlum
-              </h2>
-              <h4 className="text-sm md:text-base text-gray-200">
-                Enter your basic details to create your student account.
-              </h4>
+          <div className="text-center py-10 px-4 bg-blue-700 rounded mb-4">
+            <h2 className="text-4xl font-bold text-white">Start Your Journey with StuAlum</h2>
+            <p className="text-sm text-gray-200 mt-2">Enter your basic details to create your student account.</p>
           </div>
-                <div>
-                  <h2 className="text-lg font-semibold mb-4">Account Setup</h2>
-                  <p>Create your profile by providing your essential contact and security details.</p>
-                  
-                  <div className="flex gap-4 mb-3">
-                    <div className="w-1/2">
-                      <h4>Full Name</h4>
-                      <input
-                        type="text"
-                        placeholder="Full Name"
-                        className="border p-2 w-full"
-                        value={formData.fullName}
-                        onChange={(e) =>
-                          setFormData({ ...formData, fullName: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="w-1/2">
-                      <h4>Email</h4>
-                      <input
-                        type="email"
-                        placeholder="Email"
-                        className="border p-2 w-full"
-                        value={formData.email}
-                        onChange={(e) =>
-                          setFormData({ ...formData, email: e.target.value })
-                        }
-                      />
-                      <p >A verification link will be sent to this email</p>
-                    </div>
-                    
-                  </div>
-                  
-                  <div className="flex gap-4 mb-3">
-                    <div className="w-1/2">
-                      <h4>Password</h4>
-                      <input
-                        type="password"
-                        placeholder="Password"
-                        className="border p-2 w-full"
-                        value={formData.password}
-                        onChange={(e) =>
-                          setFormData({ ...formData, password: e.target.value })
-                        }
-                      />
-                      
-                      {!passwordValid && formData.password && (
-                        <p className="text-red-500 text-xs mb-2">Password must contain at least one uppercase letter, one number, one special character, and be at least 8 characters long.</p>
-                      )}
-                      <p>Use at least one uppercase letter, one number, one special character, and minimum 8 characters.</p>
-                    </div>
-                    <div className="w-1/2">
-                      <h4>Confirm Password</h4>
-                      <input
-                        type="password"
-                        placeholder="Confirm Password"
-                        className="border p-2 w-full"
-                        value={formData.confirmPassword}
-                        onChange={(e) =>
-                          setFormData({ ...formData, confirmPassword: e.target.value })
-                        }
-                      />
-                      {!confirmPasswordValid && formData.confirmPassword && (
-                        <p className="text-red-500 text-xs mb-2">Confirm password should match the password.</p>
-                      )}
-                    </div>
-                  </div>
-                  <h4>Phone Number</h4>
-                  <input
-                    type="tel"
-                    placeholder="Phone Number"
-                    className="border p-2 w-full mb-3"
-                    value={formData.phone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, phone: e.target.value })
-                    }
-                  />
-             </div>
+          <div>
+            <label className="block mb-1 font-semibold">Full Name</label>
+            <input
+              type="text"
+              placeholder="Full Name"
+              className="border p-2 w-full mb-3 rounded"
+              value={formData.fullName}
+              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+            />
+            <label className="block mb-1 font-semibold">Email</label>
+            <input
+              type="email"
+              placeholder="Email"
+              className="border p-2 w-full mb-3 rounded"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            />
+            <small className="block mb-3 text-gray-500">A verification link will be sent to this email</small>
+            <label className="block mb-1 font-semibold">Password</label>
+            <input
+              type="password"
+              placeholder="Password"
+              className="border p-2 w-full mb-3 rounded"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            />
+            {!passwordValid && formData.password && (
+              <p className="text-red-600 text-xs mb-3">Password must be at least 8 characters including uppercase, number, and special char.</p>
+            )}
+            <label className="block mb-1 font-semibold">Confirm Password</label>
+            <input
+              type="password"
+              placeholder="Confirm Password"
+              className="border p-2 w-full rounded"
+              value={formData.confirmPassword}
+              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+            />
+            {!confirmPasswordValid && formData.confirmPassword && (
+              <p className="text-red-600 text-xs mb-3">Confirmation password must match.</p>
+            )}
+            <label className="block mb-1 font-semibold">Phone</label>
+            <input
+              type="tel"
+              placeholder="Phone Number"
+              className="border p-2 w-full rounded"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            />
+          </div>
         </div>
       )}
 
-      {/* Navigation Buttons */}
-      {step==1 &&(
+      {/* Step 1 */}
+      {step === 1 && (
         <div>
-          <h2 className="text-lg font-semibold mb-4">Verification Detials</h2>
-          <h3>College/University</h3>
+          <label className="block mb-1 font-semibold">College / University</label>
           <Select
-                options={colleges}
-                placeholder="Select your college or university"
-                value={colleges.find((c) => c.value === formData.college) || null}
-                onChange={(selectedOption) =>
-                  setFormData({ ...formData, college: selectedOption.value })
-                }
-                className="mb-3"
+            options={colleges}
+            placeholder="Select College"
+            value={colleges.find(c => c.value === formData.college) || null}
+            onChange={(sel) => setFormData({ ...formData, college: sel ? sel.value : "" })}
+            className="mb-3"
+            styles={selectStyles}
           />
-          <h3>Enrollment Number </h3>
+          <label className="block mb-1 font-semibold">Enrollment Number</label>
           <input
             type="text"
-            placeholder="Enter your enrollment number"
-            className="border p-2 w-full mb-3"
+            placeholder="Enrollment Number"
+            className="border p-2 w-full mb-3 rounded"
             value={formData.enrollment}
-            onChange={(e) =>
-              setFormData({ ...formData, enrollment: e.target.value })
-            }
+            onChange={(e) => setFormData({ ...formData, enrollment: e.target.value })}
           />
-          <h3>Verification Method</h3>
-          <label
-                htmlFor="studentIdUpload"
-                className="flex flex-col items-center justify-center border-2 border-dashed border-blue-400 bg-blue-50 rounded-lg p-6 cursor-pointer hover:bg-blue-100 transition"
-                >
-                <CloudArrowUpIcon className="h-10 w-10 text-blue-500 mb-2" />
-                <p className="font-medium text-gray-700">Upload Student ID</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Securely upload a photo of your valid student ID
-                </p>
-                <input
-                  id="studentIdUpload"
-                  type="file"
-                  accept=".jpg,.jpeg,.png,.pdf"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                      if (file.size > 10 * 1024 * 1024) {
-                        alert("File size should not exceed 10 MB");
-                        return;
-                      }
-                      setFormData({ ...formData, verificationFile: file });
-                    }
-                  }}
-                />
-           </label>
-
-           <h4 className="mt-3">Accepted formats:JPG,PNG,PDF(MAX:5 MB)</h4>
-        </div>
-      )}
-
-      {/* step:3 */}
-
-      {step==2 &&(
-        <div>
-          <h2 className="text-lg justify font-semibold mb-4">Profile Details</h2>
-          <h3>Courses & Specialization</h3>
-          <Select
-                options={courses}
-                placeholder="Select your college or university"
-                value={courses.find((c) => c.value === formData.course) || null}
-                onChange={(selectedOption) =>
-                  setFormData({ ...formData, course: selectedOption.value })
-                }
-                className="mb-3"
-          />
-          <h3>Year of Study</h3>
-          <Select
-                options={[
-                  { value: "1st", label: "1st Year" },
-                  { value: "2nd", label: "2nd Year" },
-                  { value: "3rd", label: "3rd Year" },
-                  { value: "4th", label: "4th Year" },
-                ]}
-                placeholder="Select year of study"
-                value={formData.year ? { value: formData.year, label: ${formData.year} Year } : null}
-                onChange={(selectedOption) =>
-                  setFormData({ ...formData, year: selectedOption.value })
-                }
-          />
-
-          <h3>Skills & Interests</h3>
-          <Select
-              options={skills}
-              isMulti
-              placeholder="Type or select skills/interests"
-              value={skills.filter((s) => formData.skills.includes(s.value))}
-              onChange={(selectedOptions) => {
-                if (selectedOptions.length <= 10) {
-                  setFormData({
-                    ...formData,
-                    skills: selectedOptions.map((s) => s.value),
-                  });
+          <label htmlFor="verificationFile" className="block mb-1 font-semibold">
+            Verification File
+          </label>
+          <label className="flex items-center justify-center border-2 border-dashed border-blue-400 rounded p-6 cursor-pointer hover:bg-blue-50 mb-3">
+            <CloudArrowUpIcon className="h-10 w-10 text-blue-500 mr-3" />
+            <span>Upload File (Max 5MB, JPG/PNG/PDF)</span>
+            <input
+              id="verificationFile"
+              name="verificationFile"
+              type="file"
+              accept=".jpg,.jpeg,.png,.pdf"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (file && file.size <= 5 * 1024 * 1024) {
+                  setFormData({ ...formData, verificationFile: file });
                 } else {
-                  alert("You can select a maximum of 10 skills");
+                  alert("File size exceeds 5MB limit");
                 }
               }}
-              className="mb-3"
-          />
-
-          {/* to show selected skills */}
-
-          {formData.skills.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {formData.skills.map((skill, idx) => (
-                  <span
-                    key={idx}
-                    className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
+            />
+          </label>
+          {formData.verificationFile && (
+            <p className="text-sm text-gray-700">Selected File: {formData.verificationFile.name}</p>
           )}
+        </div>
+      )}
 
-        <h3>Career Goals</h3>
+      {/* Step 2 */}
+      {step === 2 && (
+        <div>
+          <label className="block mb-1 font-semibold">Course</label>
           <Select
-                options={careerGoals}
-                placeholder="Select your college or university"
-                value={careerGoals.find((c) => c.value === formData.careerGoal) || null}
-                onChange={(selectedOption) =>
-                  setFormData({ ...formData, careerGoal: selectedOption.value })
-                }
-                className="mb-3"
+            options={courses}
+            placeholder="Select Course"
+            value={courses.find(c => c.value === formData.course) || null}
+            onChange={(sel) => setFormData({ ...formData, course: sel ? sel.value : "" })}
+            className="mb-3"
+            styles={selectStyles}
+          />
+          <label className="block mb-1 font-semibold">Year of Study</label>
+          <Select
+            options={[
+              { value: "1st", label: "1st Year" },
+              { value: "2nd", label: "2nd Year" },
+              { value: "3rd", label: "3rd Year" },
+              { value: "4th", label: "4th Year" },
+            ]}
+            placeholder="Select Year"
+            value={formData.year ? { value: formData.year, label: `${formData.year} Year` } : null}
+            onChange={(sel) => setFormData({ ...formData, year: sel ? sel.value : "" })}
+            className="mb-3"
+            styles={selectStyles}
+          />
+          <label className="block mb-1 font-semibold">Skills & Interests (max 10)</label>
+          <Select
+            options={skills}
+            isMulti
+            placeholder="Select Skills"
+            value={skills.filter(s => formData.skills.includes(s.value))}
+            onChange={(options) => {
+              if (options.length <= 10) {
+                setFormData({ ...formData, skills: options.map(o => o.value) });
+              } else {
+                alert("Maximum 10 skills allowed");
+              }
+            }}
+            className="mb-3"
+            styles={selectStyles}
+          />
+          <label className="block mb-1 font-semibold">Career Goal</label>
+          <Select
+            options={careerGoals}
+            placeholder="Select Career Goal"
+            value={careerGoals.find(c => c.value === formData.careerGoal) || null}
+            onChange={(sel) => setFormData({ ...formData, careerGoal: sel ? sel.value : "" })}
+            className="mb-3"
+            styles={selectStyles}
           />
         </div>
       )}
 
-      {/* Step=3 */}
-      {step==3 && (
+      {/* Step 3 */}
+      {step === 3 && (
         <div>
-          <h2>Discovery Insights</h2>
-          <h4>How did you hear about us?</h4>
+          <label className="block mb-1 font-semibold">How did you hear about us?</label>
           <Select
-              options={hearAbout}
-              placeholder="How did you hear about us?"
-              value={hearAbout.find((h) => h.value === formData.hearAbout) || null}
-              onChange={(selectedOption) =>
-                setFormData({ ...formData, hearAbout: selectedOption.value })
-              }
+            options={hearAbout}
+            placeholder="Select Option"
+            value={hearAbout.find(h => h.value === formData.hearAbout) || null}
+            onChange={(sel) => setFormData({ ...formData, hearAbout: sel ? sel.value : "" })}
+            className="mb-3"
+            styles={selectStyles}
           />
-          <h4>What are you here for ?</h4>
-
-          <h4>Areas of Mentorship</h4>
+          <label className="block mb-1 font-semibold">Mentorship Area</label>
           <Select
-              options={mentorshipAreas}
-              placeholder="Select area of mentorship"
-              value={mentorshipAreas.find((m) => m.value === formData.mentorshipArea) || null}
-              onChange={(selectedOption) =>
-                setFormData({ ...formData, mentorshipArea: selectedOption.value })
-              }
+            options={mentorshipAreas}
+            placeholder="Select Mentorship Area"
+            value={mentorshipAreas.find(m => m.value === formData.mentorshipArea) || null}
+            onChange={(sel) => setFormData({ ...formData, mentorshipArea: sel ? sel.value : "" })}
+            className="mb-3"
+            styles={selectStyles}
           />
         </div>
       )}
 
-      {step==4 &&(
+      {/* Step 4 */}
+      {step === 4 && (
         <div>
-          <h2>Preferences & Notifications</h2>
-
-          <h4 c>Preferred Mentor Type</h4>
+          <label className="block mb-1 font-semibold">
+            Preferred Mentor Type <span className="text-red-600">*</span>
+          </label>
           <Select
-              options={mentorTypes}
-              placeholder="Select preferred mentor type"
-              value={mentorTypes.find((m) => m.value === formData.mentorType) || null}
-              onChange={(selectedOption) =>
-                setFormData({ ...formData, mentorType: selectedOption.value })
-              }
+            options={mentorTypes}
+            placeholder="Select Mentor Type"
+            value={mentorTypes.find(m => m.value === formData.mentorType) || null}
+            onChange={(sel) => setFormData({ ...formData, mentorType: sel ? sel.value : "" })}
+            className="mb-3"
+            styles={selectStyles}
           />
-          <h4>Preferred Communication Method</h4>
-          <div className="flex flex-col gap-4 mt-2">
+          {formData.mentorType.trim() === "" && (
+            <p className="text-red-600 text-xs mb-3">Please select a mentor type.</p>
+          )}
+          <label className="block mb-1 font-semibold">Preferred Communication Method</label>
+          <div className="flex flex-col gap-3 mb-3">
             {["In-app Chat", "Email", "Phone/WhatsApp"].map((method) => (
               <label key={method} className="flex items-center gap-2">
                 <input
@@ -395,18 +458,11 @@ const StudentRegistration = () => {
                   value={method}
                   checked={formData.communication.includes(method)}
                   onChange={(e) => {
+                    const val = e.target.value;
                     if (e.target.checked) {
-                      setFormData({
-                        ...formData,
-                        communication: [...formData.communication, e.target.value],
-                      });
+                      setFormData({ ...formData, communication: [...formData.communication, val] });
                     } else {
-                      setFormData({
-                        ...formData,
-                        communication: formData.communication.filter(
-                          (c) => c !== e.target.value
-                        ),
-                      });
+                      setFormData({ ...formData, communication: formData.communication.filter(c => c !== val) });
                     }
                   }}
                   className="h-4 w-4"
@@ -415,140 +471,106 @@ const StudentRegistration = () => {
               </label>
             ))}
           </div>
-          <h4 className="mt-6 font-semibold">Notification Preferences</h4>
-          <div className="flex flex-col gap-4 mt-2">
+
+          <label className="block mb-1 font-semibold">Notification Preferences</label>
+          <div className="flex flex-col gap-3">
             {[
               { key: "mentorship", label: "Mentorship Updates" },
               { key: "events", label: "Event Notifications" },
               { key: "community", label: "Community Updates" },
               { key: "content", label: "Content Updates" },
-            ].map((item) => (
-              <label
-                key={item.key}
-                className="flex items-center justify-between border p-3 rounded-lg"
-              >
-                <span>{item.label}</span>
+            ].map(({ key, label }) => (
+              <label key={key} className="flex justify-between items-center border p-3 rounded-lg cursor-pointer">
+                <span>{label}</span>
                 <input
                   type="checkbox"
-                  checked={formData.notifications[item.key]}
+                  name={`notifications.${key}`}
+                  checked={formData.notifications[key]}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      notifications: {
-                        ...formData.notifications,
-                        [item.key]: e.target.checked,
-                      },
-                          })
-                        }
-                      />
-                    </label>
-                  ))}
-                </div>
-              </div>
-      )}
-      
-      {/* Review & Submit Section */}
-      {step === 5 && (
-        <div className="bg-[#1E0033] text-white p-6 rounded-xl">
-          <h2 className="text-2xl font-bold text-center mb-2">Review Your Information</h2>
-          <p className="text-center text-gray-300 mb-8">
-            Please review all the details below. Click <span className="font-semibold">Edit</span> to update any section.
-          </p>
-
-          {/* Account Setup */}
-          <div className="bg-[#2A0E45] p-5 rounded-lg shadow-md mb-4">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-semibold">Account Setup</h3>
-              <button onClick={() => setStep(0)} className="text-purple-400 text-sm">Edit</button>
-            </div>
-            <p><strong>Full Name:</strong> {formData.fullName || "Not provided"}</p>
-            <p><strong>Email:</strong> {formData.email || "Not provided"}</p>
-            <p><strong>Phone:</strong> {formData.phone || "Not provided"}</p>
-          </div>
-
-          {/* Student Verification */}
-          <div className="bg-[#2A0E45] p-5 rounded-lg shadow-md mb-4">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-semibold">Student Verification</h3>
-              <button onClick={() => setStep(1)} className="text-purple-400 text-sm">Edit</button>
-            </div>
-            <p><strong>College:</strong> {formData.college || "Not provided"}</p>
-            <p><strong>Enrollment:</strong> {formData.enrollment || "Not provided"}</p>
-            <p><strong>ID File:</strong> {formData.verificationFile ? "Uploaded" : "Not uploaded"}</p>
-          </div>
-
-          {/* Profile Details */}
-          <div className="bg-[#2A0E45] p-5 rounded-lg shadow-md mb-4">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-semibold">Profile Details</h3>
-              <button onClick={() => setStep(2)} className="text-purple-400 text-sm">Edit</button>
-            </div>
-            <p><strong>Course:</strong> {formData.course || "Not provided"}</p>
-            <p><strong>Year:</strong> {formData.year || "Not provided"}</p>
-            <p>
-              <strong>Skills:</strong>{" "}
-              {formData.skills.length > 0 ? formData.skills.join(", ") : "None"}
-            </p>
-            <p><strong>Career Goal:</strong> {formData.careerGoal || "Not provided"}</p>
-          </div>
-
-          {/* Discovery Insights */}
-          <div className="bg-[#2A0E45] p-5 rounded-lg shadow-md mb-4">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-semibold">Discovery Insights</h3>
-              <button onClick={() => setStep(3)} className="text-purple-400 text-sm">Edit</button>
-            </div>
-            <p><strong>Heard About Us:</strong> {formData.hearAbout || "Not provided"}</p>
-            <p><strong>Mentorship Area:</strong> {formData.mentorshipArea || "Not provided"}</p>
-          </div>
-
-          {/* Preferences & Notifications */}
-          <div className="bg-[#2A0E45] p-5 rounded-lg shadow-md mb-4">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-semibold">Preferences & Notifications</h3>
-              <button onClick={() => setStep(4)} className="text-purple-400 text-sm">Edit</button>
-            </div>
-            <p><strong>Mentor Type:</strong> {formData.mentorType || "Not selected"}</p>
-            <p>
-              <strong>Communication:</strong>{" "}
-              {formData.communication.length > 0 ? formData.communication.join(", ") : "None"}
-            </p>
-            <p><strong>Notifications:</strong></p>
-            <ul>
-              <li>Mentorship: {formData.notifications.mentorship ? "Yes" : "No"}</li>
-              <li>Events: {formData.notifications.events ? "Yes" : "No"}</li>
-              <li>Community: {formData.notifications.community ? "Yes" : "No"}</li>
-              <li>Content: {formData.notifications.content ? "Yes" : "No"}</li>
-            </ul>
-          </div>
-
-          {/* Submit Button */}
-          <div className="mt-8 text-center">
-            <button
-              onClick={() => alert("Form Submitted!")}
-              className="px-8 py-3 rounded-lg font-semibold bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              Submit & Create Account
-            </button>
+                      notifications: { ...formData.notifications, [key]: e.target.checked },
+                    })
+                  }
+                />
+              </label>
+            ))}
           </div>
         </div>
       )}
-      {/* Navigation Buttons */}
+
+      {/* Step 5 - Review & Submit */}
+      {step === 5 && (
+  <div>
+    <h3 className="text-lg font-semibold mb-4 text-center">Review & Submit</h3>
+
+    <div className="bg-gray-100 p-4 rounded mb-3">
+      <h4 className="font-semibold mb-2">Basic Info</h4>
+      <p><strong>Name:</strong> {formData.fullName}</p>
+      <p><strong>Email:</strong> {formData.email}</p>
+      <p><strong>Phone:</strong> {formData.phone}</p>
+    </div>
+
+    <div className="bg-gray-100 p-4 rounded mb-3">
+      <h4 className="font-semibold mb-2">Verification</h4>
+      <p><strong>College:</strong> {formData.college}</p>
+      <p><strong>Enrollment Number:</strong> {formData.enrollment}</p>
+      <p><strong>Verification File:</strong> {formData.verificationFile ? formData.verificationFile.name : "Not uploaded"}</p>
+    </div>
+
+    <div className="bg-gray-100 p-4 rounded mb-3">
+      <h4 className="font-semibold mb-2">Profile Details</h4>
+      <p><strong>Branch:</strong> {formData.course}</p>
+      <p><strong>Year:</strong> {formData.year}</p>
+      <p><strong>Skills:</strong> {formData.skills.length ? formData.skills.join(", ") : "None"}</p>
+      <p><strong>Career Goal:</strong> {formData.careerGoal}</p>
+    </div>
+
+    <div className="bg-gray-100 p-4 rounded mb-3">
+      <h4 className="font-semibold mb-2">Discovery Insights</h4>
+      <p><strong>Heard About:</strong> {formData.hearAbout}</p>
+      <p><strong>Mentorship Area:</strong> {formData.mentorshipArea}</p>
+    </div>
+
+    <div className="bg-gray-100 p-4 rounded mb-3">
+      <h4 className="font-semibold mb-2">Preferences & Notifications</h4>
+      <p><strong>Mentor Type:</strong> {formData.mentorType}</p>
+      <p><strong>Communication:</strong> {formData.communication.length ? formData.communication.join(", ") : "None"}</p>
+      <p><strong>Notifications:</strong></p>
+      <ul className="list-disc pl-5">
+        <li>Mentorship Updates: {formData.notifications.mentorship ? "Yes" : "No"}</li>
+        <li>Event Notifications: {formData.notifications.events ? "Yes" : "No"}</li>
+        <li>Community Updates: {formData.notifications.community ? "Yes" : "No"}</li>
+        <li>Content Updates: {formData.notifications.content ? "Yes" : "No"}</li>
+      </ul>
+    </div>
+
+    <div className="text-center">
+      <button
+        onClick={handleSubmit}
+        className="px-8 py-3 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold mt-4"
+      >
+        Submit & Create Account
+      </button>
+    </div>
+  </div>
+)}
+
+
+      {/* Navigation */}
       <div className="flex justify-between mt-6">
-        {step > 0 && step < steps.length && (
-          <button
-            onClick={handlePrev}
-            className="px-4 py-2 bg-gray-300 rounded-lg"
-          >
+        {step > 0 && (
+          <button onClick={() => setStep(step - 1)} className="px-4 py-2 bg-gray-300 rounded">
             Back
           </button>
         )}
-
         {step < steps.length - 1 && (
           <button
-            onClick={handleNext}
+            onClick={() => isStepValid() && setStep(step + 1)}
             disabled={!isStepValid()}
-            className={px-4 py-2 rounded-lg font-semibold transition ${isStepValid() ? "bg-purple-600 hover:bg-purple-700 text-white" : "bg-gray-500 cursor-not-allowed"}}
+            className={`px-4 py-2 rounded font-semibold ${
+              isStepValid() ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-500 cursor-not-allowed"
+            }`}
           >
             Next
           </button>
@@ -557,7 +579,5 @@ const StudentRegistration = () => {
     </div>
   );
 };
-
-
 
 export default StudentRegistration;
