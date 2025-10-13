@@ -16,7 +16,7 @@ const AdminLogin = () => {
     setLoading(true);
     setError("");
     try {
-      const res = await axios.post("http://localhost:5000/login/admin", formData);
+      const res = await axios.post("http://localhost:5000/api/admin/login", formData);
       localStorage.setItem("token", res.data.token);
       alert("Logged in successfully!");
       navigate("/");
