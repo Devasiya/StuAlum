@@ -16,7 +16,7 @@ const AlumniLogin = () => {
     setLoading(true);
     setError("");
     try {
-      const res = await axios.post("http://localhost:5000/login/alumni", formData);
+      const res = await axios.post("http://localhost:5000/api/alumni/login", formData);
       localStorage.setItem("token", res.data.token);
       alert("Logged in successfully!");
       navigate("/");
