@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-// Ensure all service functions are imported
-import { getPostDetail, toggleLike, deletePost, createComment, deleteComment } from '../../services/forumService'; 
+// Ensure reportContent is imported alongside other service functions
+import { getPostDetail, toggleLike, deletePost, createComment, deleteComment, reportContent } from '../../services/forumService'; 
 import withSidebarToggle from '../../hocs/withSidebarToggle'; 
 import { getCurrentUserIdFromToken } from '../../utils/authUtils'; 
 
@@ -12,9 +12,16 @@ import { getCurrentUserIdFromToken } from '../../utils/authUtils';
 // ----------------------------------------------------------------------------------------
 const Comment = ({ comment, currentUserId, onDelete, onLike }) => {
     const authorName = comment.created_by?.full_name || 'Anonymous';
-    
-    // Check if the current user is the comment creator
     const isCommentCreator = currentUserId && (String(currentUserId) === String(comment.created_by?._id));
+
+    const handleCommentLike = async (commentId) => {
+        try {
+            await toggleLike(commentId, 'PostComment');
+            alert(`Comment liked/unliked (ID: ${commentId}).`); 
+        } catch (error) {
+            console.error("Failed to toggle comment like:", error);
+        }
+    };
 
     return (
         <div className="border-l-2 border-violet-700 pl-4 py-3 ml-4 bg-gray-800 rounded-r-lg text-gray-200">
@@ -22,18 +29,15 @@ const Comment = ({ comment, currentUserId, onDelete, onLike }) => {
                 <p className="text-sm font-semibold text-violet-300">{authorName}</p>
                 
                 <div className="flex items-center space-x-2">
-                    {/* 🚨 Comment Like Button: Calls parent handler */}
                     <button 
                         onClick={() => onLike(comment._id)} 
                         className="text-xs text-violet-400 hover:text-violet-300 transition"
                         title={comment.userLiked ? "Unlike" : "Like"} 
                     >
-                        {/* Visual toggle based on userLiked state from the backend */}
                         <span className="mr-1">{comment.userLiked ? '❤️' : '♡'}</span> 
                         Like ({comment.likes_count || 0})
                     </button>
                     
-                    {/* Conditional Delete Button */}
                     {isCommentCreator && (
                         <button 
                             onClick={() => onDelete(comment._id)} 
@@ -58,12 +62,19 @@ const PostDetail = () => {
     const { postId } = useParams();
     const navigate = useNavigate();
     
+    // Core state
     const [data, setData] = useState({ post: null, comments: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     
+    // Comment Submission State
     const [newCommentContent, setNewCommentContent] = useState(''); 
     const [isSubmitting, setIsSubmitting] = useState(false); 
+    
+    // 🚨 REPORTING STATE
+    const [isReporting, setIsReporting] = useState(false); 
+    const [reportReason, setReportReason] = useState('Spam'); 
+    const [reportDetails, setReportDetails] = useState(''); 
     
     const currentUserId = getCurrentUserIdFromToken();
 
@@ -88,7 +99,6 @@ const PostDetail = () => {
     // Post Liking Handler (Toggle Post Like)
     const handleLike = async () => {
         if (!data.post) return;
-        
         const targetId = data.post._id; 
         const targetType = 'Post'; 
 
@@ -96,13 +106,12 @@ const PostDetail = () => {
             const res = await toggleLike(targetId, targetType);
             const { increment } = res.data; 
             
-            // Optimistically update the UI count and the userLiked state
             setData(prev => ({ 
                 ...prev, 
                 post: { 
                     ...prev.post, 
                     likes_count: (prev.post.likes_count || 0) + increment,
-                    userLiked: increment === 1 // True if incremented (liked)
+                    userLiked: increment === 1 
                 } 
             }));
             
@@ -110,15 +119,14 @@ const PostDetail = () => {
             console.error("Failed to toggle like:", error);
         }
     };
-    
-    // 🚨 Comment Liking Handler (Toggle Comment Like)
+
+    // Comment Liking Handler (Toggle Comment Like)
     const handleCommentLike = async (commentId) => {
         try {
             const targetType = 'PostComment'; 
             const res = await toggleLike(commentId, targetType);
             const { increment } = res.data; 
 
-            // Update the state of the specific comment in the comments array
             setData(prev => ({
                 ...prev,
                 comments: prev.comments.map(c => {
@@ -126,7 +134,7 @@ const PostDetail = () => {
                         return {
                             ...c,
                             likes_count: (c.likes_count || 0) + increment,
-                            userLiked: increment === 1 // Toggle status
+                            userLiked: increment === 1
                         };
                     }
                     return c;
@@ -138,9 +146,7 @@ const PostDetail = () => {
         }
     };
 
-
     const handleUpdate = () => { navigate(`/forums/edit/${postId}`); };
-    
     const handleDelete = async () => {
         if (!window.confirm('Are you sure you want to delete this post? This action cannot be undone.')) return;
         try {
@@ -170,7 +176,7 @@ const PostDetail = () => {
                 post: { ...prev.post, comments_count: (prev.post.comments_count || 0) + 1 } 
             }));
             
-            setNewCommentContent(''); // Clear the input
+            setNewCommentContent(''); 
         } catch (err) {
             console.error('Error submitting comment:', err);
             setError(err.response?.data?.message || 'Failed to post comment.');
@@ -197,6 +203,29 @@ const PostDetail = () => {
         }
     };
 
+    // 🚨 Report Submission Handler
+    const handleReportSubmit = async (targetId, targetType, e) => {
+        e.preventDefault();
+        
+        try {
+            const res = await reportContent({
+                reported_item_id: targetId,
+                reported_item_type: targetType,
+                reason: reportReason,
+                details: reportDetails,
+            });
+            
+            alert(res.data.message || 'Report filed successfully!');
+            setIsReporting(false); // Close modal
+            setReportDetails('');
+            setReportReason('Spam');
+            
+        } catch (err) {
+            const message = err.response?.data?.message || 'Failed to file report.';
+            alert(`Error: ${message}`);
+        }
+    };
+
 
     // --- RENDER CHECKS ---
     if (loading) return <div className="p-8 text-violet-400 bg-gray-900 min-h-screen">Loading Post Detail...</div>;
@@ -211,10 +240,8 @@ const PostDetail = () => {
     const post = data.post;
     const loggedInId = String(currentUserId);
     const creatorId = String(post.created_by?._id);
-    
     const authorName = post.created_by?.full_name || 'Unknown Author';
     const authorRole = post.author_model_type === 'AlumniProfile' ? 'Alumnus' : 'Student';
-    
     const isCreator = currentUserId && (loggedInId === creatorId); 
     
     return (
@@ -230,16 +257,10 @@ const PostDetail = () => {
             {/* Conditional Rendering of Creator Buttons */}
             {isCreator && (
                 <div className="flex space-x-3 mb-8 justify-end">
-                    <button 
-                        onClick={handleUpdate}
-                        className="flex items-center px-4 py-2 text-sm font-semibold rounded-full bg-purple-600 text-white hover:bg-purple-700 shadow-md hover:shadow-lg transition duration-200 ease-in-out"
-                    >
+                    <button onClick={handleUpdate} className="flex items-center px-4 py-2 text-sm font-semibold rounded-full bg-purple-600 text-white hover:bg-purple-700 shadow-md hover:shadow-lg transition duration-200 ease-in-out">
                         ✏️ Edit Post
                     </button>
-                    <button 
-                        onClick={handleDelete}
-                        className="flex items-center px-4 py-2 text-sm font-semibold rounded-full bg-gray-700 text-red-400 hover:bg-red-700 hover:text-white shadow-md transition duration-200 ease-in-out"
-                    >
+                    <button onClick={handleDelete} className="flex items-center px-4 py-2 text-sm font-semibold rounded-full bg-gray-700 text-red-400 hover:bg-red-700 hover:text-white shadow-md transition duration-200 ease-in-out">
                         🗑️ Delete
                     </button>
                 </div>
@@ -259,7 +280,11 @@ const PostDetail = () => {
                 <button className="text-purple-400 hover:text-purple-300 transition">
                     💬 Comment ({data.comments.length})
                 </button>
-                <button className="text-red-500 hover:text-red-400 transition" onClick={() => alert("Reporting post...")}>
+                {/* 🚨 Report Button - Opens Modal */}
+                <button 
+                    onClick={() => setIsReporting(true)} 
+                    className="text-red-500 hover:text-red-400 transition"
+                >
                     🚩 Report
                 </button>
             </div>
@@ -296,19 +321,74 @@ const PostDetail = () => {
             <div className="space-y-4">
                 {data.comments.length > 0 ? (
                     data.comments.map((comment, index) => (
-                        // Pass currentUserId and the deletion handler down to the Comment component
                         <Comment 
                             key={comment._id ? String(comment._id) : index} 
                             comment={comment} 
                             currentUserId={currentUserId}
                             onDelete={handleCommentDelete}
-                            onLike={handleCommentLike} // 👈 Pass comment like handler
+                            onLike={handleCommentLike}
                         />
                     ))
                 ) : (
                     <p className="text-gray-400">Be the first to comment!</p>
                 )}
             </div>
+
+            {/* 🚨 REPORTING MODAL/FORM JSX */}
+            {isReporting && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4">
+                    <div className="bg-[#3A1869] p-6 rounded-lg w-full max-w-md shadow-2xl">
+                        <h3 className="text-xl font-bold text-white mb-4">Report Content</h3>
+                        <form onSubmit={(e) => handleReportSubmit(post._id, 'Post', e)}>
+                            
+                            {/* Reason Dropdown */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-300 mb-1">Reason</label>
+                                <select
+                                    value={reportReason}
+                                    onChange={(e) => setReportReason(e.target.value)}
+                                    className="w-full px-3 py-2 rounded-lg bg-[#2a0e4d] border-gray-600 text-white"
+                                    required
+                                >
+                                    <option value="Spam">Spam</option>
+                                    <option value="Hate Speech">Hate Speech</option>
+                                    <option value="Inappropriate Content">Inappropriate Content</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            
+                            {/* Details Textarea */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-300 mb-1">Details (Optional)</label>
+                                <textarea
+                                    value={reportDetails}
+                                    onChange={(e) => setReportDetails(e.target.value)}
+                                    rows="3"
+                                    placeholder="Provide more context..."
+                                    className="w-full px-3 py-2 rounded-lg bg-[#2a0e4d] border-gray-600 text-white"
+                                />
+                            </div>
+                            
+                            {/* Buttons */}
+                            <div className="flex justify-end space-x-3 mt-4">
+                                <button 
+                                    type="button" 
+                                    onClick={() => setIsReporting(false)} 
+                                    className="px-4 py-2 text-gray-400 hover:text-white transition"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition"
+                                >
+                                    Submit Report
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
