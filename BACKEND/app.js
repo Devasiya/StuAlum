@@ -11,6 +11,16 @@ const PORT = process.env.PORT || 5000;
 // Connect to MongoDB
 connectDB();
 
+require('./models/StudentProfile'); 
+require('./models/AlumniProfile'); 
+require('./models/AdminProfile');
+// Add core forum models (These models are directly involved in the failed query)
+require('./models/PostReport');   
+require('./models/PostComment');    
+require('./models/Post');           
+require('./models/PostLike');      
+require('./models/ForumCategory');
+
 // Middleware
 app.use(cors());
 app.use(express.json());
