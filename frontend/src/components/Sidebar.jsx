@@ -1,11 +1,34 @@
 // frontend/src/components/Sidebar.jsx
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+
+// 🚨 IMPORTANT: Replace this MOCK hook with your actual authentication logic.
+// This is used to determine if the user is an admin.
+const useAuth = () => {
+    // For demonstration, simulating a user object where 'role' is stored.
+    // You should retrieve this from your global state/token utility.
+    const user = { role: 'admin' }; // Change to 'student' or 'alumni' to test visibility
+    return { userRole: user?.role };
+};
+
+// 🚨 NEW MENU ITEM FOR ADMINS
+const adminMenuItem = {
+    label: 'Report Dashboard',
+    route: '/admin/reports',
+    icon: (
+        <svg className="w-6 h-6 mr-4" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M22 10V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7" />
+            <path d="M14 18l-2 2-2-2" />
+            <path d="M14 14l-2-2-2 2" />
+            <path d="M18 13h4" />
+        </svg>
+    ),
+};
 
 
 const menuItems = [
-    // --- START OF MENU DATA (UNCHANGED) ---
+    // --- START OF MENU DATA (YOUR EXISTING ITEMS) ---
     {
         label: 'Dashboard',
         route: '/',
@@ -228,29 +251,32 @@ const menuItems = [
 ];
 
 
-// KEY CHANGES: 
-// 1. Added isOpen and onClose props.
-// 2. Added conditional styling to hide/show the sidebar.
-// 3. Added the backdrop.
 const Sidebar = ({ onLogoClick, isOpen, onClose }) => {
     const navigate = useNavigate();
+    const location = useLocation();
+    
+    // 🚨 FETCH USER ROLE: Assuming useAuth provides the role
+    const { userRole } = useAuth();
+    const isAdmin = userRole === 'admin'; 
 
-    // Conditional classes for showing/hiding the sidebar off-canvas
     const sidebarClasses = `
         fixed top-0 z-50 h-screen w-60 bg-[#1A1D26] text-white flex flex-col shadow-lg 
         transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
     `;
 
-    // Function handles navigation AND closes the sidebar
     const handleNavigation = (route) => {
         navigate(route);
         onClose(); 
     };
 
+    const isMenuItemActive = (route) => {
+        return location.pathname === route ? 'bg-purple-700 font-semibold' : 'font-normal';
+    };
+
     return (
         <>
-            {/* 1. Backdrop (Renders a click-to-close overlay when the sidebar is open) */}
+            {/* 1. Backdrop */}
             {isOpen && (
                 <div 
                     className="fixed inset-0 bg-black opacity-50 z-40" 
@@ -262,7 +288,6 @@ const Sidebar = ({ onLogoClick, isOpen, onClose }) => {
             <aside className={sidebarClasses}>
                 <div
                     className="py-4 pl-8 flex items-center cursor-pointer select-none"
-                    // Close sidebar after navigating home
                     onClick={() => { onLogoClick(); onClose(); }} 
                 >
                     <img src="/logo.png" alt="Logo" className="h-10 w-auto mr-3" />
@@ -271,12 +296,12 @@ const Sidebar = ({ onLogoClick, isOpen, onClose }) => {
                 
                 <nav className="flex-1 overflow-y-auto">
                     <ul className="list-none p-0 m-0">
+                        {/* 1. STANDARD USER LINKS */}
                         {menuItems.map((item) => (
                             <li
                                 key={item.label}
-                                // Use the new handler for navigation and closing
                                 onClick={() => handleNavigation(item.route)}
-                                className="flex items-center pl-8 py-4 cursor-pointer font-normal hover:bg-white/10 transition relative"
+                                className={`flex items-center pl-8 py-4 cursor-pointer hover:bg-white/10 transition relative ${isMenuItemActive(item.route)}`}
                                 tabIndex={0}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter' || e.key === ' ') handleNavigation(item.route);
@@ -294,6 +319,23 @@ const Sidebar = ({ onLogoClick, isOpen, onClose }) => {
                             </li>
                         ))}
                     </ul>
+
+                    {/* 🚨 2. CONDITIONAL ADMIN TOOLS SECTION */}
+                    {isAdmin && (
+                        <div className="admin-links mt-8 pt-4 border-t border-gray-700">
+                            <p className="text-gray-400 text-sm pl-8 mb-2 font-semibold">ADMINISTRATION</p>
+                            <ul className="list-none p-0 m-0">
+                                <li
+                                    key={adminMenuItem.label}
+                                    onClick={() => handleNavigation(adminMenuItem.route)}
+                                    className={`flex items-center pl-8 py-4 cursor-pointer hover:bg-white/10 transition relative ${isMenuItemActive(adminMenuItem.route)}`}
+                                >
+                                    {adminMenuItem.icon}
+                                    <span>{adminMenuItem.label}</span>
+                                </li>
+                            </ul>
+                        </div>
+                    )}
                 </nav>
             </aside>
         </>
