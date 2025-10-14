@@ -27,6 +27,9 @@ app.use('/api/alumni', require('./routes/alumniRoutes'));
 app.use('/api/student', require('./routes/studentRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 
+// FORUM ROUTES 
+app.use('/api/forums', require('./routes/forumRoutes'));
+
 app.get('/', (req, res) => res.send('Hello World!'));
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
