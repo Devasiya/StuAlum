@@ -11,3 +11,10 @@ export const toggleLike = (targetId, targetType) => api.post('/forums/likes', {
     target_model_type: targetType,
 });
 // ... other API calls ...
+
+// 🚨 NEW FUNCTIONS FOR CREATOR ACTIONS
+// PUT /api/forums/posts/:postId
+export const updatePost = (postId, updateData) => api.put(`/forums/posts/${postId}`, updateData);
+
+// DELETE /api/forums/posts/:postId
+export const deletePost = (postId) => api.delete(`/forums/posts/${postId}`);
