@@ -24,7 +24,7 @@ const PostReportSchema = new mongoose.Schema({
         required: true, 
         refPath: 'reporter_model_type' 
     },
-    // The model name of the reporter's profile
+    // 🚨 FIX 1: Using the full model names as defined in your files
     reporter_model_type: { 
         type: String, 
         required: true, 
@@ -36,25 +36,24 @@ const PostReportSchema = new mongoose.Schema({
     reason: { 
         type: String, 
         required: true, 
-        enum: ['Spam', 'Hate Speech', 'Inappropriate Content', 'Other'] // Standard reasons
+        enum: ['Spam', 'Hate Speech', 'Inappropriate Content', 'Other'] 
     }, 
     details: { 
         type: String, 
-        default: '' // Additional text provided by the reporter
+        default: '' 
     },
     
     // --- 4. Admin Management Fields ---
     
-    // Status allows the Admin to track the review process
     status: { 
         type: String, 
         default: 'Pending', 
         enum: ['Pending', 'Reviewed - Action Taken', 'Reviewed - No Action'] 
     },
-    // Links to your AdminProfile model when the report is resolved
+    // 🚨 FIX 2: Using the full model name for the static Admin reference
     resolved_by_admin_id: { 
         type: mongoose.Schema.Types.ObjectId, 
-        ref: 'AdminProfile', 
+        ref: 'AdminProfile', // Must match the name used in mongoose.model('AdminProfile', ...)
         default: null 
     }, 
     resolved_at: { type: Date },

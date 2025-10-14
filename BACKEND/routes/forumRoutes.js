@@ -22,8 +22,7 @@ router.get('/posts/:postId/comments', auth, forumController.getPostComments);
 router.post('/posts', auth, checkRole(ALL_USERS), forumController.createPost);
 router.post('/comments', auth, checkRole(ALL_USERS), forumController.createComment);
 
-// 🚨 FIX: ADDED MISSING ROUTE FOR COMMENT DELETION
-// Comment deletion also requires checking user ownership within the controller
+// FIX: ADDED MISSING ROUTE FOR COMMENT DELETION
 router.delete('/comments/:commentId', auth, checkRole(ALL_USERS), forumController.deleteComment);
 
 router.post('/likes', auth, checkRole(ALL_USERS), forumController.toggleLike);
@@ -38,7 +37,9 @@ router.delete('/posts/:postId', auth, checkRole(ALL_USERS), forumController.dele
 router.post('/admin/categories', auth, checkRole(ADMIN_ONLY), forumController.createCategory);
 router.put('/admin/posts/:postId/pin', auth, checkRole(ADMIN_ONLY), forumController.togglePin);
 router.delete('/admin/posts/:postId', auth, checkRole(ADMIN_ONLY), forumController.adminDeletePost);
+// FIX: ADDED ROUTE FOR FETCHING PENDING REPORTS
 router.get('/admin/reports', auth, checkRole(ADMIN_ONLY), forumController.getPendingReports);
+// FIX: ADDED ROUTE FOR RESOLVING REPORTS
 router.put('/admin/reports/:reportId', auth, checkRole(ADMIN_ONLY), forumController.resolveReport);
 
 module.exports = router;

@@ -34,3 +34,32 @@ export const getCurrentUserIdFromToken = () => {
         return null;
     }
 };
+
+export const getCurrentUserRole = () => {
+    try {
+        // Assume 'token' is the correct storage key based on your previous debugging
+        const token = localStorage.getItem('token'); 
+
+        if (!token) return null;
+
+        // Decode the Payload (the middle part of the JWT)
+        const parts = token.split('.');
+        if (parts.length !== 3) return null;
+        
+        const base64Url = parts[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+
+        const payload = JSON.parse(jsonPayload);
+        
+        // 🚨 CRITICAL: Return the role field from the token payload.
+        // The role field is typically named 'role'.
+        return payload.role || null; 
+        
+    } catch (e) {
+        console.error("AuthUtil: Error during role decoding.", e);
+        return null;
+    }
+};
