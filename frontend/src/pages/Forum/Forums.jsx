@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import withSidebarToggle from '../hocs/withSidebarToggle'; 
-import Navbar from '../components/Navbar'; 
-import PostCard from '../components/forums/PostCard';
-import { getPostsList, getForumCategories } from '../services/forumService';
+import { useNavigate } from 'react-router-dom';
+import withSidebarToggle from '../../hocs/withSidebarToggle'; 
+import Navbar from '../../components/Navbar'; 
+import PostCard from '../../components/forums/PostCard';
+import { getPostsList, getForumCategories } from '../../services/forumService';
 
 const Forums = ({ onSidebarToggle }) => {
     const [posts, setPosts] = useState([]);
     const [categories, setCategories] = useState([]); 
     const [selectedCategory, setSelectedCategory] = useState(null); 
     const [loading, setLoading] = useState(true);
+
+    const navigate = useNavigate();
 
     // --- Data Fetching Logic (Robust useEffect) ---
     useEffect(() => {
@@ -35,7 +38,7 @@ const Forums = ({ onSidebarToggle }) => {
     }, [selectedCategory]); 
 
     const handleCreatePost = () => {
-        alert("Navigating to Post Creation form...");
+        navigate('/forums/new');
     };
 
     // --- Render Logic ---
