@@ -21,6 +21,11 @@ router.get('/posts/:postId/comments', auth, forumController.getPostComments);
 // Post creation requires Student or Alumni role
 router.post('/posts', auth, checkRole(ALL_USERS), forumController.createPost);
 router.post('/comments', auth, checkRole(ALL_USERS), forumController.createComment);
+
+// 🚨 FIX: ADDED MISSING ROUTE FOR COMMENT DELETION
+// Comment deletion also requires checking user ownership within the controller
+router.delete('/comments/:commentId', auth, checkRole(ALL_USERS), forumController.deleteComment);
+
 router.post('/likes', auth, checkRole(ALL_USERS), forumController.toggleLike);
 router.post('/report', auth, checkRole(ALL_USERS), forumController.reportContent);
 

@@ -98,7 +98,7 @@ exports.loginStudent = async (req, res) => {
     if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
 
     const token = jwt.sign({ id: user._id, role: 'student'  }, process.env.JWT_SECRET || 'your_jwt_secret', {
-      expiresIn: '1h',
+      expiresIn: '7d',
     });
 
     res.json({
