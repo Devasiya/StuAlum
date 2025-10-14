@@ -18,3 +18,13 @@ export const updatePost = (postId, updateData) => api.put(`/forums/posts/${postI
 
 // DELETE /api/forums/posts/:postId
 export const deletePost = (postId) => api.delete(`/forums/posts/${postId}`);
+
+// POST /api/forums/comments
+export const createComment = (commentData) => {
+    // commentData should contain { post_id, content }
+    return api.post('/forums/comments', commentData);
+};
+
+
+// DELETE /api/forums/comments/:commentId
+export const deleteComment = (commentId) => api.delete(`/forums/comments/${commentId}`);
