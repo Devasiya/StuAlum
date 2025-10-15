@@ -4,9 +4,18 @@ import React, { useState, useEffect } from 'react';
 import withSidebarToggle from '../../hocs/withSidebarToggle'; 
 import Navbar from '../../components/Navbar'; 
 import { useNavigate } from 'react-router-dom';
-// Ensure deleteEvent is imported
 import { getEventsList, registerForEvent, deleteEvent } from '../../services/eventService'; 
-import { getCurrentUserIdFromToken } from '../../utils/authUtils'; // Utility for creator check
+import { getCurrentUserIdFromToken } from '../../utils/authUtils'; 
+
+// 🚨 NEW HELPER: Formats a Date object into a local YYYY-MM-DD string
+const toLocalDateKey = (date) => {
+    // This method uses local time components to create the key, avoiding UTC shifting.
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const day = d.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
 
 // --- Filter Options Data ---
 const filterOptions = {
@@ -16,9 +25,56 @@ const filterOptions = {
     event_mode: ['All', 'in_person', 'virtual', 'hybrid'], 
 };
 
+/**
+ * UPDATED HELPER: Function to generate the calendar grid data based on a date context.
+ */
+const getCalendarDays = (events, dateContext) => { 
+    const today = new Date();
+    const startOfMonth = new Date(dateContext.getFullYear(), dateContext.getMonth(), 1);
+    
+    let dayOfWeek = startOfMonth.getDay(); 
+    const startDayOffset = (dayOfWeek === 0) ? 6 : dayOfWeek - 1; 
+
+    const calendarStart = new Date(startOfMonth);
+    calendarStart.setDate(startOfMonth.getDate() - startDayOffset);
+
+    const days = [];
+    let currentDay = new Date(calendarStart);
+
+    // Map events by date (YYYY-MM-DD) for fast lookup (using local time key)
+    const eventsByDay = events.reduce((acc, event) => {
+        const dateKey = toLocalDateKey(event.start_time); // 🚨 FIX APPLIED
+        if (!acc[dateKey]) {
+            acc[dateKey] = [];
+        }
+        acc[dateKey].push(event);
+        return acc;
+    }, {});
+
+    // Generate 35 days (5 weeks) for a consistent calendar grid
+    for (let i = 0; i < 35; i++) {
+        const isCurrentMonth = currentDay.getMonth() === startOfMonth.getMonth(); 
+        const dateKey = toLocalDateKey(currentDay); // 🚨 FIX APPLIED
+        const isToday = currentDay.toDateString() === today.toDateString();
+
+        days.push({
+            date: new Date(currentDay),
+            dayOfMonth: currentDay.getDate(),
+            isCurrentMonth,
+            isToday,
+            events: eventsByDay[dateKey] || []
+        });
+        currentDay.setDate(currentDay.getDate() + 1);
+    }
+
+    return days;
+};
+
 const EventsCalendar = ({ onSidebarToggle }) => {
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
+    
+    const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date()); 
     
     const [filters, setFilters] = useState({
         category: 'All',
@@ -58,7 +114,28 @@ const EventsCalendar = ({ onSidebarToggle }) => {
         fetchEvents();
     }, [appliedFilters]); 
 
-    // --- HANDLERS ---
+    // Generate the calendar data using the fetched events and the current view context
+    const calendarDays = getCalendarDays(events, currentCalendarDate);
+
+
+    // --- CALENDAR NAVIGATION HANDLERS ---
+    const handlePreviousMonth = () => {
+        setCurrentCalendarDate(prevDate => {
+            const newDate = new Date(prevDate);
+            newDate.setMonth(newDate.getMonth() - 1);
+            return newDate;
+        });
+    };
+
+    const handleNextMonth = () => {
+        setCurrentCalendarDate(prevDate => {
+            const newDate = new Date(prevDate);
+            newDate.setMonth(newDate.getMonth() + 1);
+            return newDate;
+        });
+    };
+    
+    // --- GENERAL HANDLERS ---
     const handleFilterChange = (key, value) => {
         setFilters(prev => ({ ...prev, [key === 'event_mode' ? 'location' : key]: value }));
     };
@@ -78,7 +155,12 @@ const EventsCalendar = ({ onSidebarToggle }) => {
     };
 
     const handleToggleCalendar = () => {
-        setIsCalendarOpen(prev => !prev);
+        setIsCalendarOpen(prev => {
+            if (!prev) {
+                 setCurrentCalendarDate(new Date());
+            }
+            return !prev;
+        });
     };
     
     const handleDeleteEvent = async (eventId) => {
@@ -252,7 +334,6 @@ const EventsCalendar = ({ onSidebarToggle }) => {
                             <p className="text-center text-gray-400 p-4">No events found matching current filters.</p>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"> 
-                                {/* Renders all events */}
                                 {events.map(event => ( 
                                     <HighlightCard key={event._id || event.id} event={event} />
                                 ))}
@@ -261,7 +342,7 @@ const EventsCalendar = ({ onSidebarToggle }) => {
                     </div>
                 </div>
                 
-                {/* CALENDAR MODAL OVERLAY (Fixed Position, Slides In) */}
+                {/* 🚨 CALENDAR MODAL OVERLAY */}
                 <div 
                     className={`fixed top-0 right-0 h-full w-full max-w-lg z-40 bg-[#1A1D26] p-6 shadow-2xl overflow-y-auto 
                         transition-transform duration-500 ease-in-out
@@ -270,21 +351,71 @@ const EventsCalendar = ({ onSidebarToggle }) => {
                     style={{ paddingTop: '80px' }} 
                 >
                     <h2 className="text-2xl font-bold text-white mb-6">Calendar View</h2>
+
+                    {/* MONTH NAVIGATION */}
+                    <div className="flex justify-between items-center mb-4 bg-[#3A1869] p-2 rounded-lg">
+                        <button onClick={handlePreviousMonth} className="text-purple-300 hover:text-white p-2 rounded-full transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        
+                        <h3 className="text-xl font-bold text-white">
+                            {currentCalendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        </h3>
+                        
+                        <button onClick={handleNextMonth} className="text-purple-300 hover:text-white p-2 rounded-full transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                    </div>
                     
                     {loading ? (
                         <div className="text-center p-10 text-purple-300 bg-[#3A1869] rounded-xl">Loading Calendar...</div>
                     ) : (
-                        // Placeholder for the Calendar Grid logic (can be expanded later)
+                        // Calendar Grid Implementation
                         <div className="grid grid-cols-7 gap-px bg-gray-700 border border-gray-700 rounded-xl overflow-hidden">
+                            {/* Day Names */}
                             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
                                 <div key={day} className="text-center py-2 bg-[#3A1869] text-purple-300 font-semibold text-sm">
                                     {day}
                                 </div>
                             ))}
-                            {Array.from({ length: 35 }).map((_, i) => (
-                                <div key={i} className="h-28 bg-[#2a0e4d] p-1 text-xs text-white border-t border-gray-700">
-                                    <p className="text-gray-400 text-right">{i + 1}</p>
-                                    {/* Event rendering logic placeholder */}
+                            
+                            {/* Calendar Days */}
+                            {calendarDays.map((day) => (
+                                <div 
+                                    key={day.date.toISOString()}
+                                    className={`h-28 p-1 text-xs text-white border-t border-gray-700 
+                                        ${day.isCurrentMonth ? 'bg-[#2a0e4d]' : 'bg-gray-900/50'}
+                                        ${day.isToday ? 'border-2 border-red-500/70' : ''}
+                                        overflow-hidden group hover:bg-[#3d1a6e] transition duration-150 ease-in-out
+                                    `}
+                                >
+                                    <p className={`text-right font-medium mb-1 ${day.isToday ? 'text-red-400' : 'text-gray-400'}`}>
+                                        {day.dayOfMonth}
+                                    </p>
+                                    
+                                    {/* Render Events for the Day */}
+                                    {day.events.slice(0, 2).map(event => (
+                                        <span 
+                                            key={event._id || event.id} 
+                                            className={`block px-1 rounded my-0.5 whitespace-nowrap overflow-hidden text-ellipsis cursor-pointer 
+                                                ${event.category === 'Workshop' ? 'bg-blue-600' : 'bg-purple-600'}
+                                            `}
+                                            title={event.title}
+                                        >
+                                            {event.title}
+                                        </span>
+                                    ))}
+
+                                    {/* Show count of remaining events */}
+                                    {day.events.length > 2 && (
+                                        <span className="text-gray-400 text-xs px-1 mt-1 block">
+                                            +{day.events.length - 2} more
+                                        </span>
+                                    )}
                                 </div>
                             ))}
                         </div>
