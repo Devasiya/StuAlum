@@ -38,7 +38,7 @@ const CreateEventForm = ({ onSidebarToggle }) => {
         setError('');
         setLoading(true);
 
-        // Simple validation check
+        // Simple validation check: Start time must be before end time.
         if (new Date(formData.start_time) >= new Date(formData.end_time)) {
              setError('Start time must be before end time.');
              setLoading(false);
@@ -49,8 +49,8 @@ const CreateEventForm = ({ onSidebarToggle }) => {
             // The formData fields (start_time, end_time) are already ISO strings from the datetime-local input
             await createEvent(formData); 
             
-            alert('Event created successfully!'); // Use alert temporarily
-            navigate('/events'); // Redirect to the main calendar view
+            // 🚨 SUCCESS ACTION: Redirect directly to the main calendar view
+            navigate('/events'); 
 
         } catch (err) {
             const message = err.response?.data?.message || 'Failed to create event. Check ownership/auth.';
