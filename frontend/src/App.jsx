@@ -6,15 +6,19 @@ import { Routes, Route } from 'react-router-dom';
 // Import the HOC
 import withSidebarToggle from './hocs/withSidebarToggle'; 
 
-// Import all page components
+// Feature Pages
 import Home from './pages/home';
+
+// Forums & Forum Features
 import Forums from './pages/Forum/Forums'; 
 import PostDetail from './pages/Forum/PostDetail'; 
 import CreatePostForm from './pages/Forum/CreatePostForm'; 
 import EditPostForm from './pages/Forum/EditPostForm'; 
-// 🚨 NEW IMPORT: Admin Report Dashboard
+
+// Admin
 import ReportDashboard from './pages/Admin/ReportDashboard'; 
 
+// Registration & Auth
 import AlumniRegistration from './components/Registration/AlumniRegistration';
 import StudentRegistration from './components/Registration/StudentRegistration';
 import AdminRegistration from './components/Registration/AdminRegistration';
@@ -22,8 +26,8 @@ import AdminLogin from './pages/Login/AdminLogin';
 import AlumniLogin from './pages/Login/AlumniLogin';
 import StudentLogin from './pages/Login/StudentLogin';
 
-// Import the utility function to get user role
-import { getCurrentUserRole } from './utils/authUtils'; // Assuming you have a function to get the role
+// Alumni Directory
+import AlumniDirectory from './pages/AlumniDirectory'; 
 
 // --- WRAP FEATURE COMPONENTS WITH HOC ---
 const LayoutHome = withSidebarToggle(Home);
@@ -31,14 +35,12 @@ const LayoutForums = withSidebarToggle(Forums);
 const LayoutPostDetail = withSidebarToggle(PostDetail);
 const LayoutCreatePostForm = withSidebarToggle(CreatePostForm);
 const LayoutEditPostForm = withSidebarToggle(EditPostForm);
-// 🚨 NEW WRAPPER for the admin dashboard
 const LayoutReportDashboard = withSidebarToggle(ReportDashboard);
 
+// NEW: Wrap the AlumniDirectory page with HOC
+const LayoutAlumniDirectory = withSidebarToggle(AlumniDirectory);
 
 const App = () => {
-    // 🚨 FETCH USER ROLE: This is a simplification; use your actual auth context/hook
-    const userRole = getCurrentUserRole(); 
-
     return(
         <>
             <Routes>
@@ -50,9 +52,12 @@ const App = () => {
                 <Route path="/forums/posts/:postId" element={<LayoutPostDetail />} /> 
                 <Route path="/forums/new" element={<LayoutCreatePostForm />} /> 
                 <Route path="/forums/edit/:postId" element={<LayoutEditPostForm />} /> 
-                
-                {/* 🚨 NEW ADMIN ROUTE */}
+
+                {/* Admin Dashboard */}
                 <Route path="/admin/reports" element={<LayoutReportDashboard />} />
+
+                {/* Alumni Directory */}
+                <Route path="/alumni-directory" element={<LayoutAlumniDirectory />} />
                 
                 {/* --- AUTH ROUTES --- */}
                 <Route path="/login/admin" element={<AdminLogin />} />
