@@ -21,6 +21,8 @@ import AdminRegistration from './components/Registration/AdminRegistration';
 import AdminLogin from './pages/Login/AdminLogin';
 import AlumniLogin from './pages/Login/AlumniLogin';
 import StudentLogin from './pages/Login/StudentLogin';
+import EventsCalendar from './pages/Events/EventsCalendar'; 
+import CreateEventForm from './pages/Events/CreateEventForm';
 
 // Import the utility function to get user role
 import { getCurrentUserRole } from './utils/authUtils'; // Assuming you have a function to get the role
@@ -31,12 +33,15 @@ const LayoutForums = withSidebarToggle(Forums);
 const LayoutPostDetail = withSidebarToggle(PostDetail);
 const LayoutCreatePostForm = withSidebarToggle(CreatePostForm);
 const LayoutEditPostForm = withSidebarToggle(EditPostForm);
-// 🚨 NEW WRAPPER for the admin dashboard
 const LayoutReportDashboard = withSidebarToggle(ReportDashboard);
+const LayoutEvents = withSidebarToggle(EventsCalendar);
+const LayoutCreateEventForm = withSidebarToggle(CreateEventForm);
+
+// Main App Component
 
 
 const App = () => {
-    // 🚨 FETCH USER ROLE: This is a simplification; use your actual auth context/hook
+    // FETCH USER ROLE: This is a simplification; use your actual auth context/hook
     const userRole = getCurrentUserRole(); 
 
     return(
@@ -51,8 +56,12 @@ const App = () => {
                 <Route path="/forums/new" element={<LayoutCreatePostForm />} /> 
                 <Route path="/forums/edit/:postId" element={<LayoutEditPostForm />} /> 
                 
-                {/* 🚨 NEW ADMIN ROUTE */}
+                {/*  NEW ADMIN ROUTE */}
                 <Route path="/admin/reports" element={<LayoutReportDashboard />} />
+
+                {/*  NEW EVENTS ROUTE */}
+                <Route path="/events" element={<LayoutEvents />} />
+                <Route path="/events/new" element={<LayoutCreateEventForm />} /> 
                 
                 {/* --- AUTH ROUTES --- */}
                 <Route path="/login/admin" element={<AdminLogin />} />
