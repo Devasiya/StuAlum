@@ -70,49 +70,43 @@ const StudentCard = ({ student }) => {
     };
 
     return (
-        // 🛑 WRAP THE ENTIRE CARD IN A LINK COMPONENT
-        <Link 
-            to={`/student/profile/${id}`} // Dynamically links to the student profile ID (assuming we have a student profile page)
-            className="block bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-lg transition-shadow duration-200 ease-in-out hover:border-blue-400"
+        <div
+            className="bg-[#1a1a2e] rounded-lg p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer"
+            onClick={() => navigate(`/student/profile/${id}`)}
         >
-            <div className="flex items-start mb-3">
-                {/* Profile Image */}
+            <div className="flex items-start space-x-4">
                 <img
-                    src={imageSource} 
-                    alt={name || 'Student Profile'}
-                    className="w-12 h-12 rounded-full object-cover mr-4"
+                    src={imageSource}
+                    alt={name}
+                    className="w-16 h-16 rounded-full object-cover"
                 />
-                <div className="flex-1 min-w-0">
-                    {/* Name, Branch, Year of Graduation */}
-                    <h3 className="text-lg font-bold truncate">{name}</h3>
-                    <p className="text-sm text-gray-600 truncate">
-                        <span className="font-semibold">{branch}</span> - Graduating {yearOfGraduation}
-                    </p>
+                <div className="flex-1">
+                    <h3 className="text-xl font-semibold text-white mb-1">{name}</h3>
+                    <p className="text-gray-300 mb-2">{branch} - Graduating {yearOfGraduation}</p>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                        {displayTags.map((tag, index) => (
+                            <span
+                                key={index}
+                                className="px-3 py-1 bg-blue-600 text-white rounded-full text-sm"
+                            >
+                                {tag}
+                            </span>
+                        ))}
+                    </div>
+                    <div className="flex space-x-2">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleMessage(e);
+                            }}
+                            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200"
+                        >
+                            Message
+                        </button>
+                    </div>
                 </div>
             </div>
-
-            {/* Tags/Skills */}
-            <div className="flex flex-wrap gap-2 mb-4">
-                {displayTags.slice(0, 5).map((tag, index) => ( 
-                    <span
-                        key={index}
-                        className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full font-medium"
-                    >
-                        {tag}
-                    </span>
-                ))}
-            </div>
-
-            {/* Action Buttons: Use e.preventDefault() to stop the Link from navigating */}
-            <div className="flex space-x-2">
-                <button
-                    className="flex-1 py-2 px-3 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-100"
-                    onClick={handleMessage}
-                >
-                    Message
-                </button>
-            </div>
-        </Link>
+        </div>
     );
 };
 
