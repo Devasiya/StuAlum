@@ -26,8 +26,10 @@ import AdminLogin from './pages/Login/AdminLogin';
 import AlumniLogin from './pages/Login/AlumniLogin';
 import StudentLogin from './pages/Login/StudentLogin';
 
-// Alumni Directory
+// Alumni Directory & Profile
 import AlumniDirectory from './pages/AlumniDirectory'; 
+// 🛑 ADDED: Import the component for the individual profile page
+import AlumniProfilePage from './pages/AlumniProfilePage'; 
 
 // --- WRAP FEATURE COMPONENTS WITH HOC ---
 const LayoutHome = withSidebarToggle(Home);
@@ -39,6 +41,9 @@ const LayoutReportDashboard = withSidebarToggle(ReportDashboard);
 
 // NEW: Wrap the AlumniDirectory page with HOC
 const LayoutAlumniDirectory = withSidebarToggle(AlumniDirectory);
+// 🛑 ADDED: Wrap the AlumniProfilePage component
+const LayoutAlumniProfilePage = withSidebarToggle(AlumniProfilePage);
+
 
 const App = () => {
     return(
@@ -56,8 +61,10 @@ const App = () => {
                 {/* Admin Dashboard */}
                 <Route path="/admin/reports" element={<LayoutReportDashboard />} />
 
-                {/* Alumni Directory */}
+                {/* Alumni Directory & Profile Routes */}
                 <Route path="/alumni-directory" element={<LayoutAlumniDirectory />} />
+                {/* 🛑 ADDED: Dynamic route for the single alumni profile */}
+                <Route path="/alumni/profile/:id" element={<LayoutAlumniProfilePage />} />
                 
                 {/* --- AUTH ROUTES --- */}
                 <Route path="/login/admin" element={<AdminLogin />} />
