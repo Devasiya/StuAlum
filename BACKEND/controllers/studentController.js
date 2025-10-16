@@ -15,13 +15,18 @@ exports.registerStudent = async (req, res) => {
       }
     }
 
-    ['skills', 'interests', 'communication'].forEach(field => {
+    ['skills', 'interests', 'communication', 'projects'].forEach(field => {
       if (data[field]) {
         if (typeof data[field] === 'string') {
           try {
             data[field] = JSON.parse(data[field]);
           } catch {
-            data[field] = data[field].split(',').map(s => s.trim());
+            if (field === 'projects') {
+              // Special handling for projects - expect array of objects
+              data[field] = [];
+            } else {
+              data[field] = data[field].split(',').map(s => s.trim());
+            }
           }
         }
       } else {
@@ -74,6 +79,7 @@ exports.registerStudent = async (req, res) => {
       mentor_type: data.mentor_type,
       communication: data.communication,
       hear_about: data.hear_about,
+      projects: data.projects,
     };
 
     const newStudent = new StudentProfile(newStudentData);
@@ -165,6 +171,21 @@ exports.getStudentDirectory = async (req, res) => {
   } catch (error) {
     console.error('Error fetching student directory:', error);
     res.status(500).json({ message: 'Error fetching student directory', error: error.message });
+  }
+};
+
+// --- Get Student Profile By ID ---
+exports.getStudentProfileById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const student = await StudentProfile.findById(id).select('-password');
+    if (!student) return res.status(404).json({ message: 'Student profile not found' });
+    const profile = student.toObject();
+    res.status(200).json(profile);
+  } catch (error) {
+    if (error.kind === 'ObjectId') return res.status(400).json({ message: 'Invalid profile ID format' });
+    console.error('Error fetching student profile by ID:', error);
+    res.status(500).json({ message: 'Server error while fetching profile' });
   }
 };
 
