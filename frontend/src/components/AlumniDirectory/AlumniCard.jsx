@@ -1,6 +1,8 @@
 // frontend/src/components/AlumniDirectory/AlumniCard.jsx
 
 import React from 'react';
+// 🛑 ADDED: Import Link for client-side routing
+import { Link } from 'react-router-dom'; 
 
 // 🛑 CRITICAL FIX 1: Define the API base URL for image loading.
 // This MUST match the base URL you used in AlumniDirectory.jsx.
@@ -10,6 +12,8 @@ const DEFAULT_PROFILE_IMAGE = '/path/to/default/image.png'; // Fallback image pa
 const AlumniCard = ({ alumnus }) => {
     // Destructure for cleaner access and default values
     const { 
+        // 🛑 ADDED: Destructure the 'id' which is used for the URL
+        id,
         name, 
         title, 
         company, 
@@ -19,7 +23,6 @@ const AlumniCard = ({ alumnus }) => {
     } = alumnus;
 
     // 🛑 CRITICAL FIX 2: Construct the full URL for the profile image.
-    // This handles both the relative paths (/uploads/...) and missing images.
     const imageSource = profileImage 
         ? `${API_BASE_URL}${profileImage}`
         : DEFAULT_PROFILE_IMAGE;
@@ -28,7 +31,12 @@ const AlumniCard = ({ alumnus }) => {
     const displayTags = Array.isArray(tags) ? tags : [];
 
     return (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-lg transition-shadow">
+        // 🛑 WRAP THE ENTIRE CARD IN A LINK COMPONENT
+        // This makes the whole card clickable and navigates to the profile route
+        <Link 
+            to={`/alumni/profile/${id}`} // Dynamically links to the profile ID
+            className="block bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-lg transition-shadow duration-200 ease-in-out hover:border-blue-400"
+        >
             <div className="flex items-start mb-3">
                 {/* Profile Image */}
                 <img
@@ -64,16 +72,22 @@ const AlumniCard = ({ alumnus }) => {
                 ))}
             </div>
 
-            {/* Action Buttons */}
+            {/* Action Buttons: Use e.preventDefault() to stop the Link from navigating when the buttons are clicked */}
             <div className="flex space-x-2">
-                <button className="flex-1 py-2 px-3 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-100">
+                <button 
+                    className="flex-1 py-2 px-3 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-100"
+                    onClick={(e) => e.preventDefault()} // Stops navigation when 'Message' is clicked
+                >
                     Message
                 </button>
-                <button className="flex-1 py-2 px-3 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold">
+                <button 
+                    className="flex-1 py-2 px-3 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold"
+                    onClick={(e) => e.preventDefault()} // Stops navigation when 'Request Mentorship' is clicked
+                >
                     Request Mentorship
                 </button>
             </div>
-        </div>
+        </Link>
     );
 };
 
