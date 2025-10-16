@@ -111,3 +111,60 @@ exports.loginStudent = async (req, res) => {
   }
 };
 
+// --- Student Directory Listing ---
+exports.getStudentDirectory = async (req, res) => {
+  try {
+    const { nameOrKeyword, branch, yearOfGraduation, skills, limit = 20, skip = 0 } = req.query;
+    const numLimit = Number(limit);
+    const numSkip = Number(skip);
+    const filters = {};
+
+    if (nameOrKeyword) {
+      const searchRegex = new RegExp(nameOrKeyword, 'i');
+      filters.$or = [
+        { full_name: searchRegex },
+        { branch: searchRegex },
+        { skills: { $elemMatch: { $regex: searchRegex } } },
+        { interests: { $elemMatch: { $regex: searchRegex } } },
+      ];
+    }
+
+    if (branch) filters.branch = new RegExp(branch, 'i');
+    if (yearOfGraduation) filters.year_of_graduation = Number(yearOfGraduation);
+    if (skills) filters.skills = { $elemMatch: { $regex: new RegExp(skills, 'i') } };
+
+    let studentList;
+    let totalCount;
+
+    if (Object.keys(filters).length === 0) {
+      totalCount = await StudentProfile.countDocuments({});
+      studentList = await StudentProfile.aggregate([
+        { $match: {} },
+        { $sample: { size: numLimit } },
+        { $project: { full_name: 1, branch: 1, year_of_graduation: 1, skills: 1, interests: 1, photo: 1 } }
+      ]);
+    } else {
+      totalCount = await StudentProfile.countDocuments(filters);
+      studentList = await StudentProfile.find(filters)
+        .select('full_name branch year_of_graduation skills interests photo')
+        .limit(numLimit)
+        .skip(numSkip)
+        .lean();
+    }
+
+    const formattedStudents = studentList.map(student => ({
+      id: student._id,
+      name: student.full_name,
+      branch: student.branch,
+      yearOfGraduation: student.year_of_graduation,
+      profileImage: student.photo || '/path/to/default/image.png',
+      tags: [...(student.skills || []).slice(0, 3), ...(student.interests || []).slice(0, 2)].slice(0, 5),
+    }));
+
+    res.status(200).json({ students: formattedStudents, total: totalCount });
+  } catch (error) {
+    console.error('Error fetching student directory:', error);
+    res.status(500).json({ message: 'Error fetching student directory', error: error.message });
+  }
+};
+

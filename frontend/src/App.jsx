@@ -32,6 +32,7 @@ import CreateEventForm from './pages/Events/CreateEventForm';
 // Alumni Directory & Profile
 import AlumniDirectory from './pages/AlumniDirectory';
 import AlumniProfilePage from './pages/AlumniProfilePage';
+import StudentDirectory from './pages/StudentDirectory';
 import Messages from './pages/Messages';
 
 // --- WRAP FEATURE COMPONENTS WITH HOC ---
@@ -46,6 +47,7 @@ const LayoutEvents = withSidebarToggle(EventsCalendar);
 const LayoutCreateEventForm = withSidebarToggle(CreateEventForm);
 const LayoutAlumniDirectory = withSidebarToggle(AlumniDirectory);
 const LayoutAlumniProfilePage = withSidebarToggle(AlumniProfilePage);
+const LayoutStudentDirectory = withSidebarToggle(StudentDirectory);
 const LayoutMessages = withSidebarToggle(Messages);
 
 
@@ -83,6 +85,9 @@ const App = () => {
                 {/* Alumni Directory & Profile Routes (From HEAD) */}
                 <Route path="/alumni-directory" element={<LayoutAlumniDirectory />} />
                 <Route path="/alumni/profile/:id" element={<LayoutAlumniProfilePage />} />
+
+                {/* Student Directory Route */}
+                <Route path="/student-directory" element={<LayoutStudentDirectory />} />
 
                 {/* Messages Routes */}
                 <Route path="/messages" element={<LayoutMessages />} />

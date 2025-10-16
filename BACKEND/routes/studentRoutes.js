@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const upload = require('../middleware/uploadMiddleware');
-const { registerStudent, loginStudent } = require('../controllers/studentController');
+const { registerStudent, loginStudent, getStudentDirectory } = require('../controllers/studentController');
 
 router.post('/register', upload.fields([
   { name: 'photo', maxCount: 1 },
@@ -9,5 +9,7 @@ router.post('/register', upload.fields([
 ]), registerStudent);
 
 router.post('/login', loginStudent);
+
+router.get('/directory', getStudentDirectory);
 
 module.exports = router;
