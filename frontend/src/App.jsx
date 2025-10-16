@@ -16,7 +16,8 @@ import CreatePostForm from './pages/Forum/CreatePostForm';
 import EditPostForm from './pages/Forum/EditPostForm'; 
 
 // Admin
-import ReportDashboard from './pages/Admin/ReportDashboard'; 
+import ReportDashboard from './pages/Admin/ReportDashboard';
+import AdminDirectory from './pages/Admin/AdminDirectory';
 
 // Registration & Auth
 import AlumniRegistration from './components/Registration/AlumniRegistration';
@@ -29,8 +30,9 @@ import EventsCalendar from './pages/Events/EventsCalendar';
 import CreateEventForm from './pages/Events/CreateEventForm';
 
 // Alumni Directory & Profile
-import AlumniDirectory from './pages/AlumniDirectory'; 
-import AlumniProfilePage from './pages/AlumniProfilePage'; 
+import AlumniDirectory from './pages/AlumniDirectory';
+import AlumniProfilePage from './pages/AlumniProfilePage';
+import Messages from './pages/Messages';
 
 // --- WRAP FEATURE COMPONENTS WITH HOC ---
 const LayoutHome = withSidebarToggle(Home);
@@ -39,10 +41,12 @@ const LayoutPostDetail = withSidebarToggle(PostDetail);
 const LayoutCreatePostForm = withSidebarToggle(CreatePostForm);
 const LayoutEditPostForm = withSidebarToggle(EditPostForm);
 const LayoutReportDashboard = withSidebarToggle(ReportDashboard);
+const LayoutAdminDirectory = withSidebarToggle(AdminDirectory);
 const LayoutEvents = withSidebarToggle(EventsCalendar);
 const LayoutCreateEventForm = withSidebarToggle(CreateEventForm);
 const LayoutAlumniDirectory = withSidebarToggle(AlumniDirectory);
 const LayoutAlumniProfilePage = withSidebarToggle(AlumniProfilePage);
+const LayoutMessages = withSidebarToggle(Messages);
 
 
 // --- Helper Function (Placeholder for your user authentication logic) ---
@@ -74,14 +78,19 @@ const App = () => {
 
                 {/* Admin Dashboard */}
                 <Route path="/admin/reports" element={<LayoutReportDashboard />} />
+                <Route path="/admin/directory" element={<LayoutAdminDirectory />} />
 
                 {/* Alumni Directory & Profile Routes (From HEAD) */}
                 <Route path="/alumni-directory" element={<LayoutAlumniDirectory />} />
                 <Route path="/alumni/profile/:id" element={<LayoutAlumniProfilePage />} />
-                
+
+                {/* Messages Routes */}
+                <Route path="/messages" element={<LayoutMessages />} />
+                <Route path="/messages/:conversationId" element={<LayoutMessages />} />
+
                 {/* Events Routes (From merged branch) */}
                 <Route path="/events" element={<LayoutEvents />} />
-                <Route path="/events/new" element={<LayoutCreateEventForm />} /> 
+                <Route path="/events/new" element={<LayoutCreateEventForm />} />
                 
                 {/* --- AUTH ROUTES --- */}
                 <Route path="/login/admin" element={<AdminLogin />} />
