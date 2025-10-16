@@ -3,6 +3,8 @@
 const express = require('express');
 const router = express.Router();
 const upload = require('../middleware/uploadMiddleware');
+const auth = require('../middleware/auth');
+const { checkRole } = require('../middleware/checkRole');
 const {
     registerAlumni,
     loginAlumni,
@@ -34,7 +36,7 @@ router.get('/export', exportAlumniToCSV);
 // Existing: Dynamic route to fetch a single alumni profile by ID
 router.get('/:id', getAlumniProfileById);
 
-// 🛑 NEW ROUTE: Invite Alumni
-router.post('/invite', inviteAlumni);
+// 🛑 NEW ROUTE: Invite Alumni (Admin only)
+router.post('/invite', auth, checkRole(['admin']), inviteAlumni);
 
 module.exports = router;

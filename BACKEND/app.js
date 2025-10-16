@@ -37,11 +37,18 @@ app.use('/api/alumni', require('./routes/alumniRoutes'));
 app.use('/api/student', require('./routes/studentRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 
-// FORUM ROUTES 
+// FORUM ROUTES
 app.use('/api/forums', require('./routes/forumRoutes'));
 
 // EVENTS ROUTER
 app.use('/api/events', require('./routes/eventRoutes'));
+
+// MESSAGES ROUTER
+app.use('/api/messages', require('./routes/messageRoutes'));
+
+// MENTORSHIP ROUTER
+app.use('/api/mentorship', require('./routes/mentorshipRoutes'));
+
 
 app.get('/', (req, res) => res.send('Hello World!'));
 
