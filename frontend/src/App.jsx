@@ -25,10 +25,11 @@ import AdminRegistration from './components/Registration/AdminRegistration';
 import AdminLogin from './pages/Login/AdminLogin';
 import AlumniLogin from './pages/Login/AlumniLogin';
 import StudentLogin from './pages/Login/StudentLogin';
+import EventsCalendar from './pages/Events/EventsCalendar'; 
+import CreateEventForm from './pages/Events/CreateEventForm';
 
 // Alumni Directory & Profile
 import AlumniDirectory from './pages/AlumniDirectory'; 
-// 🛑 ADDED: Import the component for the individual profile page
 import AlumniProfilePage from './pages/AlumniProfilePage'; 
 
 // --- WRAP FEATURE COMPONENTS WITH HOC ---
@@ -38,14 +39,25 @@ const LayoutPostDetail = withSidebarToggle(PostDetail);
 const LayoutCreatePostForm = withSidebarToggle(CreatePostForm);
 const LayoutEditPostForm = withSidebarToggle(EditPostForm);
 const LayoutReportDashboard = withSidebarToggle(ReportDashboard);
-
-// NEW: Wrap the AlumniDirectory page with HOC
+const LayoutEvents = withSidebarToggle(EventsCalendar);
+const LayoutCreateEventForm = withSidebarToggle(CreateEventForm);
 const LayoutAlumniDirectory = withSidebarToggle(AlumniDirectory);
-// 🛑 ADDED: Wrap the AlumniProfilePage component
 const LayoutAlumniProfilePage = withSidebarToggle(AlumniProfilePage);
 
 
+// --- Helper Function (Placeholder for your user authentication logic) ---
+// NOTE: This must be defined outside the App component or use a React Hook.
+const getCurrentUserRole = () => {
+    // Replace with your actual authentication context or role check
+    return 'user'; 
+};
+
+
 const App = () => {
+    // RESOLVED CONFLICT: Keeping the userRole logic
+    // FETCH USER ROLE: This is a simplification; use your actual auth context/hook
+    const userRole = getCurrentUserRole(); 
+    
     return(
         <>
             <Routes>
@@ -57,14 +69,19 @@ const App = () => {
                 <Route path="/forums/posts/:postId" element={<LayoutPostDetail />} /> 
                 <Route path="/forums/new" element={<LayoutCreatePostForm />} /> 
                 <Route path="/forums/edit/:postId" element={<LayoutEditPostForm />} /> 
+                
+                {/* RESOLVED CONFLICT: Combining Admin, Alumni, and Events routes */}
 
                 {/* Admin Dashboard */}
                 <Route path="/admin/reports" element={<LayoutReportDashboard />} />
 
-                {/* Alumni Directory & Profile Routes */}
+                {/* Alumni Directory & Profile Routes (From HEAD) */}
                 <Route path="/alumni-directory" element={<LayoutAlumniDirectory />} />
-                {/* 🛑 ADDED: Dynamic route for the single alumni profile */}
                 <Route path="/alumni/profile/:id" element={<LayoutAlumniProfilePage />} />
+                
+                {/* Events Routes (From merged branch) */}
+                <Route path="/events" element={<LayoutEvents />} />
+                <Route path="/events/new" element={<LayoutCreateEventForm />} /> 
                 
                 {/* --- AUTH ROUTES --- */}
                 <Route path="/login/admin" element={<AdminLogin />} />
