@@ -30,6 +30,10 @@ const StudentProfileSchema = new mongoose.Schema({
     content: { type: Boolean, default: true },
   },
   hear_about: { type: String },
+  projects: [{
+    title: { type: String, required: true },
+    description: { type: String, required: true }
+  }],
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 
 module.exports = mongoose.model('StudentProfile', StudentProfileSchema);

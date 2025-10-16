@@ -33,6 +33,7 @@ api.interceptors.request.use(
 export const getAlumniDirectory = (queryParams) => api.get(`/alumni/directory?${queryParams}`);
 export const inviteAlumni = (emails) => api.post('/alumni/invite', { emails });
 export const getStudentDirectory = (queryParams) => api.get(`/student/directory?${queryParams}`);
+export const getStudentProfileById = (id) => api.get(`/student/profile/${id}`);
 export const exportAlumniToCSV = (queryParams) => api.get(`/alumni/export?${queryParams}`, { responseType: 'blob' });
 
 export default api;

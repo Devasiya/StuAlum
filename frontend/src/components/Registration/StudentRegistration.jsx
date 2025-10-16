@@ -83,6 +83,7 @@ const StudentRegistration = () => {
     linkedinUrl: "",
     githubUrl: "",
     extracurricular: "",
+    projects: [],
   });
 
   const passwordValid = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(formData.password);
@@ -174,6 +175,7 @@ const StudentRegistration = () => {
       linkedin_url: formData.linkedinUrl,
       github_url: formData.githubUrl,
       extracurricular: formData.extracurricular,
+      projects: JSON.stringify(formData.projects),
     };
 
     const formPayload = new FormData();
@@ -241,6 +243,7 @@ const StudentRegistration = () => {
           linkedinUrl: "",
           githubUrl: "",
           extracurricular: "",
+          projects: [],
         });
         navigate("/login/student");
       } else {
@@ -531,6 +534,52 @@ const StudentRegistration = () => {
             onChange={(e) => setFormData({ ...formData, extracurricular: e.target.value })}
             rows={3}
           />
+          <label className="block mb-1 font-semibold">Projects</label>
+          <div className="mb-3">
+            {formData.projects.map((project, index) => (
+              <div key={index} className="border p-3 rounded mb-2">
+                <input
+                  type="text"
+                  placeholder="Project Title"
+                  className="border p-2 w-full mb-2 rounded"
+                  value={project.title}
+                  onChange={(e) => {
+                    const newProjects = [...formData.projects];
+                    newProjects[index].title = e.target.value;
+                    setFormData({ ...formData, projects: newProjects });
+                  }}
+                />
+                <textarea
+                  placeholder="Project Description"
+                  className="border p-2 w-full mb-2 rounded"
+                  value={project.description}
+                  onChange={(e) => {
+                    const newProjects = [...formData.projects];
+                    newProjects[index].description = e.target.value;
+                    setFormData({ ...formData, projects: newProjects });
+                  }}
+                  rows={2}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newProjects = formData.projects.filter((_, i) => i !== index);
+                    setFormData({ ...formData, projects: newProjects });
+                  }}
+                  className="text-red-600 hover:text-red-800"
+                >
+                  Remove Project
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, projects: [...formData.projects, { title: "", description: "" }] })}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Add Project
+            </button>
+          </div>
         </div>
       )}
 
@@ -660,6 +709,7 @@ const StudentRegistration = () => {
             <p><strong>LinkedIn URL:</strong> {formData.linkedinUrl || "None"}</p>
             <p><strong>GitHub URL:</strong> {formData.githubUrl || "None"}</p>
             <p><strong>Extracurricular Activities:</strong> {formData.extracurricular || "None"}</p>
+            <p><strong>Projects:</strong> {formData.projects.length ? formData.projects.map(p => `${p.title}: ${p.description}`).join("; ") : "None"}</p>
           </div>
 
           <div className="bg-gray-100 p-4 rounded mb-3">
@@ -671,7 +721,6 @@ const StudentRegistration = () => {
           <div className="bg-gray-100 p-4 rounded mb-3">
             <h4 className="font-semibold mb-2">Preferences & Notifications</h4>
             <p><strong>Mentor Type:</strong> {formData.mentorType}</p>
-            <p><strong>Communication:</strong> {formData.communication.length ? formData.communication.join(", ") : "None"}</p>
             <p><strong>Notifications:</strong></p>
             <ul className="list-disc pl-5">
               <li>Mentorship Updates: {formData.notifications.mentorship ? "Yes" : "No"}</li>

@@ -33,6 +33,7 @@ import CreateEventForm from './pages/Events/CreateEventForm';
 import AlumniDirectory from './pages/AlumniDirectory';
 import AlumniProfilePage from './pages/AlumniProfilePage';
 import StudentDirectory from './pages/StudentDirectory';
+import StudentProfilePage from './pages/StudentProfilePage';
 import Messages from './pages/Messages';
 
 // --- WRAP FEATURE COMPONENTS WITH HOC ---
@@ -48,6 +49,7 @@ const LayoutCreateEventForm = withSidebarToggle(CreateEventForm);
 const LayoutAlumniDirectory = withSidebarToggle(AlumniDirectory);
 const LayoutAlumniProfilePage = withSidebarToggle(AlumniProfilePage);
 const LayoutStudentDirectory = withSidebarToggle(StudentDirectory);
+const LayoutStudentProfilePage = withSidebarToggle(StudentProfilePage);
 const LayoutMessages = withSidebarToggle(Messages);
 
 
@@ -88,6 +90,7 @@ const App = () => {
 
                 {/* Student Directory Route */}
                 <Route path="/student-directory" element={<LayoutStudentDirectory />} />
+                <Route path="/student/profile/:id" element={<LayoutStudentProfilePage />} />
 
                 {/* Messages Routes */}
                 <Route path="/messages" element={<LayoutMessages />} />
