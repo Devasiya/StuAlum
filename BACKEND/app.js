@@ -20,7 +20,7 @@ require('./models/PostComment');
 require('./models/Post');           
 require('./models/PostLike');      
 require('./models/ForumCategory');
-
+require('./models/Event');
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -39,6 +39,9 @@ app.use('/api/admin', require('./routes/adminRoutes'));
 
 // FORUM ROUTES 
 app.use('/api/forums', require('./routes/forumRoutes'));
+
+// EVENTS ROUTER
+app.use('/api/events', require('./routes/eventRoutes'));
 
 app.get('/', (req, res) => res.send('Hello World!'));
 
