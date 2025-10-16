@@ -11,7 +11,7 @@ const AlumniFilterBar = ({ filters, onFilterChange }) => {
     };
 
     return (
-        <div className="bg-white p-4 rounded-lg shadow-md mb-6">
+        <div className="bg-[#3A1869] p-4 rounded-lg shadow-md mb-6 border border-purple-500/50">
             <div className="flex flex-wrap gap-4 items-center mb-4">
                 {/* Search Input */}
                 <input
@@ -20,7 +20,7 @@ const AlumniFilterBar = ({ filters, onFilterChange }) => {
                     placeholder="Name or keyword"
                     value={filters.nameOrKeyword}
                     onChange={handleChange}
-                    className="flex-1 min-w-[150px] p-2 border border-gray-300 rounded"
+                    className="flex-1 min-w-[150px] p-2 bg-[#2a0e4d] text-white border border-purple-500 rounded placeholder-gray-400"
                 />
                 {/* Grad Year Input (Can be a dropdown/select in reality) */}
                 <input
@@ -29,7 +29,7 @@ const AlumniFilterBar = ({ filters, onFilterChange }) => {
                     placeholder="Grad Year"
                     value={filters.gradYear}
                     onChange={handleChange}
-                    className="w-full sm:w-auto p-2 border border-gray-300 rounded"
+                    className="w-full sm:w-auto p-2 bg-[#2a0e4d] text-white border border-purple-500 rounded placeholder-gray-400"
                 />
                 {/* Company Input */}
                 <input
@@ -38,7 +38,7 @@ const AlumniFilterBar = ({ filters, onFilterChange }) => {
                     placeholder="Company"
                     value={filters.company}
                     onChange={handleChange}
-                    className="w-full sm:w-auto p-2 border border-gray-300 rounded"
+                    className="w-full sm:w-auto p-2 bg-[#2a0e4d] text-white border border-purple-500 rounded placeholder-gray-400"
                 />
                 {/* Industry Input */}
                 <input
@@ -47,7 +47,7 @@ const AlumniFilterBar = ({ filters, onFilterChange }) => {
                     placeholder="Industry"
                     value={filters.industry}
                     onChange={handleChange}
-                    className="w-full sm:w-auto p-2 border border-gray-300 rounded"
+                    className="w-full sm:w-auto p-2 bg-[#2a0e4d] text-white border border-purple-500 rounded placeholder-gray-400"
                 />
             </div>
 
@@ -57,7 +57,7 @@ const AlumniFilterBar = ({ filters, onFilterChange }) => {
                 <button
                     onClick={() => onFilterChange({ remoteFriendly: !filters.remoteFriendly })}
                     className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                        filters.remoteFriendly ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'
+                        filters.remoteFriendly ? 'bg-purple-600 text-white' : 'bg-[#2a0e4d] text-gray-300 border border-purple-500 hover:bg-purple-700'
                     }`}
                 >
                     <i className="fas fa-map-marker-alt mr-1"></i> Remote-friendly
@@ -67,7 +67,7 @@ const AlumniFilterBar = ({ filters, onFilterChange }) => {
                 <button
                     onClick={() => onFilterChange({ hiring: !filters.hiring })}
                     className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                        filters.hiring ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'
+                        filters.hiring ? 'bg-purple-600 text-white' : 'bg-[#2a0e4d] text-gray-300 border border-purple-500 hover:bg-purple-700'
                     }`}
                 >
                     <i className="fas fa-briefcase mr-1"></i> Hiring
@@ -77,7 +77,7 @@ const AlumniFilterBar = ({ filters, onFilterChange }) => {
                 <button
                     onClick={() => onFilterChange({ mentorReady: !filters.mentorReady })}
                     className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                        filters.mentorReady ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'
+                        filters.mentorReady ? 'bg-purple-600 text-white' : 'bg-[#2a0e4d] text-gray-300 border border-purple-500 hover:bg-purple-700'
                     }`}
                 >
                     <i className="fas fa-hands-helping mr-1"></i> Mentor-ready
@@ -87,7 +87,7 @@ const AlumniFilterBar = ({ filters, onFilterChange }) => {
                 <button
                     onClick={() => onFilterChange({ classOf: filters.classOf === '2018' ? '' : '2018' })}
                     className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                        filters.classOf === '2018' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'
+                        filters.classOf === '2018' ? 'bg-purple-600 text-white' : 'bg-[#2a0e4d] text-gray-300 border border-purple-500 hover:bg-purple-700'
                     }`}
                 >
                     <i className="fas fa-graduation-cap mr-1"></i> Class of 2018+

@@ -6,40 +6,40 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key'; 
 
 const auth = (req, res, next) => {
-    // 1. Get token from header
-    const token = req.header('x-auth-token'); 
+    // 1. Get token from header: Check for the standard 'Authorization' header
+    const authHeader = req.header('Authorization');
 
-    // 2. Check if token exists
-    if (!token) {
-        return res.status(401).json({ message: 'No token, authorization denied.' });
-    }
+    // 2. Check if header exists and starts with 'Bearer '
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ message: 'Authorization header missing or malformed (Expected: Bearer <token>).' });
+    }
 
-    try {
-        // 3. Verify token
-        const decoded = jwt.verify(token, JWT_SECRET);
-        
-        // --- CRITICAL CORRECTION POINT ---
-        // Validate that both essential fields (id and role) exist in the token payload.
-        if (!decoded.id || !decoded.role) {
-            return res.status(401).json({ 
-                message: 'Token payload is corrupted or missing essential user data (id or role).' 
-            });
-        }
-        
-        // 4. Attach user data to request object
-        req.user = {
-            id: decoded.id,
-            // FIX: Use a safeguard (optional chaining/check) before using toLowerCase(). 
-            // Although the 'if' block above prevents the crash, this is a clean defensive measure.
-            role: decoded.role.toLowerCase() 
-        };
+    // 3. Extract the token (strip 'Bearer ')
+    const token = authHeader.split(' ')[1];
 
-        next();
-    } catch (e) {
-        console.error('Token validation error:', e.message);
-        // Returns 401 for signature errors or expired tokens
-        res.status(401).json({ message: 'Token is not valid or has expired.' });
-    }
+    try {
+        // 4. Verify token
+        const decoded = jwt.verify(token, JWT_SECRET);
+        
+        // Validate token payload integrity
+        if (!decoded.id || !decoded.role) {
+            return res.status(401).json({ 
+                message: 'Token payload is corrupted or missing essential user data.' 
+            });
+        }
+        
+        // 5. Attach user data to request object
+        req.user = {
+            id: decoded.id,
+            role: decoded.role.toLowerCase() 
+        };
+
+        next();
+    } catch (e) {
+        console.error('Token validation error:', e.message);
+        // Returns 401 for signature errors or expired tokens
+        res.status(401).json({ message: 'Token is not valid or has expired.' });
+    }
 };
 
 module.exports = auth;

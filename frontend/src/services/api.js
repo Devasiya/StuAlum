@@ -19,8 +19,8 @@ api.interceptors.request.use(
         const token = localStorage.getItem('token'); 
         
         if (token) {
-            // Set the x-auth-token header as required by your backend auth.js middleware
-            config.headers['x-auth-token'] = token;
+            // Set the Authorization header with Bearer token as required by your backend auth.js middleware
+            config.headers['Authorization'] = `Bearer ${token}`;
         }
         return config;
     },
@@ -28,5 +28,10 @@ api.interceptors.request.use(
         return Promise.reject(error);
     }
 );
+
+// Alumni Directory API functions
+export const getAlumniDirectory = (queryParams) => api.get(`/alumni/directory?${queryParams}`);
+export const inviteAlumni = (emails) => api.post('/alumni/invite', { emails });
+export const exportAlumniToCSV = (queryParams) => api.get(`/alumni/export?${queryParams}`, { responseType: 'blob' });
 
 export default api;

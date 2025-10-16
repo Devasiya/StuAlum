@@ -1,7 +1,9 @@
 // frontend/src/components/Sidebar.jsx
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import MentorshipRequestsModal from './MentorshipRequestsModal';
+import { getCurrentUserRole } from '../utils/authUtils';
 
 // 🚨 IMPORTANT: Replace this MOCK hook with your actual authentication logic.
 // This is used to determine if the user is an admin.
@@ -12,19 +14,31 @@ const useAuth = () => {
     return { userRole: user?.role };
 };
 
-// 🚨 NEW MENU ITEM FOR ADMINS
-const adminMenuItem = {
-    label: 'Report Dashboard',
-    route: '/admin/reports',
-    icon: (
-        <svg className="w-6 h-6 mr-4" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24">
-            <path d="M22 10V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7" />
-            <path d="M14 18l-2 2-2-2" />
-            <path d="M14 14l-2-2-2 2" />
-            <path d="M18 13h4" />
-        </svg>
-    ),
-};
+// 🚨 ADMIN MENU ITEMS
+const adminMenuItems = [
+    {
+        label: 'Admin Directory',
+        route: '/admin/directory',
+        icon: (
+            <svg className="w-6 h-6 mr-4" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="7" r="4" />
+                <path d="M2 21v-2a7 7 0 0 1 7-7h6a7 7 0 0 1 7 7v2" />
+            </svg>
+        ),
+    },
+    {
+        label: 'Report Dashboard',
+        route: '/admin/reports',
+        icon: (
+            <svg className="w-6 h-6 mr-4" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M22 10V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7" />
+                <path d="M14 18l-2 2-2-2" />
+                <path d="M14 14l-2-2-2 2" />
+                <path d="M18 13h4" />
+            </svg>
+        ),
+    },
+];
 
 
 const menuItems = [
@@ -254,10 +268,12 @@ const menuItems = [
 const Sidebar = ({ onLogoClick, isOpen, onClose }) => {
     const navigate = useNavigate();
     const location = useLocation();
-    
+    const [isMentorshipModalOpen, setIsMentorshipModalOpen] = useState(false);
+
     // 🚨 FETCH USER ROLE: Assuming useAuth provides the role
     const { userRole } = useAuth();
-    const isAdmin = userRole === 'admin'; 
+    const isAdmin = userRole === 'admin';
+    const isAlumni = userRole === 'alumni';
 
     const sidebarClasses = `
         fixed top-0 z-50 h-screen w-60 bg-[#1A1D26] text-white flex flex-col shadow-lg 
@@ -325,19 +341,62 @@ const Sidebar = ({ onLogoClick, isOpen, onClose }) => {
                         <div className="admin-links mt-8 pt-4 border-t border-gray-700">
                             <p className="text-gray-400 text-sm pl-8 mb-2 font-semibold">ADMINISTRATION</p>
                             <ul className="list-none p-0 m-0">
+                                {adminMenuItems.map((item) => (
+                                    <li
+                                        key={item.label}
+                                        onClick={() => handleNavigation(item.route)}
+                                        className={`flex items-center pl-8 py-4 cursor-pointer hover:bg-white/10 transition relative ${isMenuItemActive(item.route)}`}
+                                        tabIndex={0}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') handleNavigation(item.route);
+                                        }}
+                                        role="button"
+                                        aria-label={`Maps to ${item.label}`}
+                                    >
+                                        {item.icon}
+                                        <span>{item.label}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    {/* Mentorship Requests for Alumni */}
+                    {isAlumni && (
+                        <div className="mentorship-links mt-8 pt-4 border-t border-gray-700">
+                            <p className="text-gray-400 text-sm pl-8 mb-2 font-semibold">MENTORSHIP</p>
+                            <ul className="list-none p-0 m-0">
                                 <li
-                                    key={adminMenuItem.label}
-                                    onClick={() => handleNavigation(adminMenuItem.route)}
-                                    className={`flex items-center pl-8 py-4 cursor-pointer hover:bg-white/10 transition relative ${isMenuItemActive(adminMenuItem.route)}`}
+                                    onClick={() => {
+                                        setIsMentorshipModalOpen(true);
+                                        onClose();
+                                    }}
+                                    className="flex items-center pl-8 py-4 cursor-pointer hover:bg-white/10 transition"
                                 >
-                                    {adminMenuItem.icon}
-                                    <span>{adminMenuItem.label}</span>
+                                    <svg
+                                        className="w-6 h-6 mr-4"
+                                        fill="none"
+                                        stroke="white"
+                                        strokeWidth="2"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <circle cx="8" cy="7" r="3" />
+                                        <circle cx="16" cy="7" r="3" />
+                                        <path d="M2 21v-2a4 4 0 0 1 4-4h0a4 4 0 0 1 4 4v2" />
+                                        <path d="M14 21v-2a4 4 0 0 1 4-4h0a4 4 0 0 1 4 4v2" />
+                                    </svg>
+                                    <span>Mentorship Requests</span>
                                 </li>
                             </ul>
                         </div>
                     )}
                 </nav>
             </aside>
+
+            <MentorshipRequestsModal
+                isOpen={isMentorshipModalOpen}
+                onClose={() => setIsMentorshipModalOpen(false)}
+            />
         </>
     );
 };

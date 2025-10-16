@@ -1,10 +1,11 @@
-// BACKEND/controllers/alumniController.js
+ // BACKEND/controllers/alumniController.js
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
-const nodemailer = require('nodemailer'); // Assuming nodemailer is installed
+const { MailerSend, EmailParams, Sender, Recipient } = require('mailersend');
 const AlumniProfile = require('../models/AlumniProfile');
+const AdminProfile = require('../models/AdminProfile');
 
 // --- Existing Functions (registerAlumni, loginAlumni) ---
 // (Content omitted for brevity, assumed to be correct)
@@ -116,20 +117,20 @@ exports.getAlumniDirectory = async (req, res) => {
         if (Object.keys(filters).length === 0) {
             totalCount = await AlumniProfile.countDocuments({});
             alumniList = await AlumniProfile.aggregate([
-                { $match: { } }, { $sample: { size: numLimit } }, 
+                { $match: { } }, { $sample: { size: numLimit } },
                 { $project: { full_name: 1, current_position: 1, company: 1, location: 1, profile_photo_url: 1, skills: 1, graduation_year: 1, contribution_preferences: 1 } }
             ]);
         } else {
             totalCount = await AlumniProfile.countDocuments(filters);
             alumniList = await AlumniProfile.find(filters)
-                .select('full_name current_position company location profile_photo_url skills graduation_year contribution_preferences')
+                .select('full_name current_position company location profile_photo_url skills graduation_year contribution_preferences user_id')
                 .limit(numLimit)
                 .skip(numSkip)
                 .lean();
         }
 
         const formattedAlumni = alumniList.map(alumnus => ({
-            id: alumnus._id, name: alumnus.full_name, title: alumnus.current_position,
+            id: alumnus._id, user_id: alumnus._id, name: alumnus.full_name, title: alumnus.current_position,
             company: alumnus.company, location: alumnus.location,
             profileImage: alumnus.profile_photo_url || '/path/to/default/image.png',
             tags: [...(alumnus.skills || []).slice(0, 3), ...(alumnus.contribution_preferences || []).slice(0, 2)].slice(0, 5),
@@ -172,38 +173,59 @@ exports.inviteAlumni = async (req, res) => {
     }
 
     try {
-        // 🛑 CRITICAL FIX: The function name is createTransport, not createTransporter
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
+        // Fetch the logged-in admin's details
+        const admin = await AdminProfile.findById(req.user.id).select('full_name email');
+        if (!admin) {
+            return res.status(404).json({ message: 'Admin not found.' });
+        }
+
+        // Initialize MailerSend
+        const mailersend = new MailerSend({
+            apiKey: process.env.MAILERSEND_API_KEY,
         });
 
         // 🛑 NOTE: Filter out existing users before sending (optional but good practice)
         const existingAlumni = await AlumniProfile.find({ email: { $in: emails } }).select('email');
         const existingEmails = new Set(existingAlumni.map(a => a.email));
         const newEmails = emails.filter(email => !existingEmails.has(email));
-        
+
         if (newEmails.length === 0) {
             return res.status(200).json({ message: 'All provided emails are already registered.' });
         }
 
+        // For MailerSend trial account, you can only send to verified emails
+        // For now, we'll send to the admin's email as a test, or you need to verify recipient domains
+        const verifiedRecipients = newEmails.filter(email =>
+            email.includes('@gmail.com') || email.includes('@yahoo.com') ||
+            email === admin.email // Allow admin's email for testing
+        );
 
-        // Email options
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: newEmails.join(','), // Send only to unregistered emails
-            subject: 'Invitation to Join the Alumni Network',
-            html: `
+        if (verifiedRecipients.length === 0) {
+            return res.status(400).json({
+                message: 'MailerSend trial account can only send to verified email addresses. Please verify recipient domains in MailerSend dashboard or upgrade your account.'
+            });
+        }
+
+        // Create recipients - use verified emails only
+        const recipients = verifiedRecipients.map(email => new Recipient(email, ''));
+
+        // Use a verified sender - for trial, you might need to use your MailerSend verified email
+        // If admin.email is not verified, use a placeholder or your verified email
+        const verifiedSenderEmail = process.env.MAILERSEND_VERIFIED_EMAIL || admin.email;
+
+        // Create email parameters
+        const emailParams = new EmailParams()
+            .setFrom(new Sender(verifiedSenderEmail, admin.full_name))
+            .setTo(recipients)
+            .setReplyTo(new Sender(admin.email, admin.full_name))
+            .setSubject('Invitation to Join the Alumni Network')
+            .setHtml(`
                 <h1>Welcome to the Alumni Network!</h1>
-                <p>You have been invited to join our alumni directory. Please register at <a href="http://localhost:3000/register">our website</a> to connect with fellow alumni.</p>
-                <p>Best regards,<br>The Alumni Team</p>
-            `,
-        };
+                <p>You have been invited to join our alumni directory by ${admin.full_name} (${admin.email}). Please register at <a href="http://localhost:3000/register">our website</a> to connect with fellow alumni.</p>
+                <p>Best regards,<br>${admin.full_name}</p>
+            `);
 
-        await transporter.sendMail(mailOptions);
+        await mailersend.email.send(emailParams);
 
         res.status(200).json({
             message: `Invitations sent successfully to ${newEmails.length} emails.`,

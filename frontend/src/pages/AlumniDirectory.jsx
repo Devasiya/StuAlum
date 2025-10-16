@@ -1,20 +1,23 @@
 // frontend/src/pages/AlumniDirectory.jsx
 
 import React, { useState, useEffect, useCallback } from 'react';
-import Sidebar from '../components/Sidebar';
+import withSidebarToggle from '../hocs/withSidebarToggle';
+import Navbar from '../components/Navbar';
 import AlumniFilterBar from '../components/AlumniDirectory/AlumniFilterBar';
 import AlumniCard from '../components/AlumniDirectory/AlumniCard';
 import InviteModal from '../components/InviteModal';
-import axios from 'axios';
+import api from '../services/api';
+import { getCurrentUserRole } from '../utils/authUtils';
 
 // Define the base URL for the backend API
-const API_BASE_URL = 'http://localhost:5000'; 
+const API_BASE_URL = 'http://localhost:5000';
 
-const AlumniDirectory = () => {
+const AlumniDirectory = ({ onSidebarToggle }) => {
     const [alumniData, setAlumniData] = useState([]);
-    const [totalResults, setTotalResults] = useState(0); 
+    const [totalResults, setTotalResults] = useState(0);
     const [loading, setLoading] = useState(false);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const userRole = getCurrentUserRole();
 
     const [page, setPage] = useState(1);
     const LIMIT = 20;
@@ -38,7 +41,7 @@ const AlumniDirectory = () => {
             params.limit = LIMIT;
             params.skip = (page - 1) * LIMIT;
             const queryParams = new URLSearchParams(params).toString();
-            const response = await axios.get(`${API_BASE_URL}/api/alumni/directory?${queryParams}`);
+            const response = await api.get(`/alumni/directory?${queryParams}`);
             const data = response.data;
             setAlumniData(data.alumni || []);
             setTotalResults(data.total || 0);
@@ -77,7 +80,7 @@ const AlumniDirectory = () => {
     const handleInviteSubmit = async (emailListString) => {
         const emails = emailListString.split(',').map(e => e.trim()).filter(e => e.length > 0);
         try {
-            const response = await axios.post(`${API_BASE_URL}/api/alumni/invite`, { emails });
+            const response = await api.post('/alumni/invite', { emails });
             setIsInviteModalOpen(false); // Close modal on success
             alert(response.data.message);
         } catch (error) {
@@ -94,49 +97,51 @@ const AlumniDirectory = () => {
 
 
     return (
-        <div className="alumni-directory-layout flex">
-            <Sidebar activePage="Alumni Directory" />
-            <main className="flex-1 p-8">
+        <>
+            <Navbar onSidebarToggle={onSidebarToggle} />
+            <main className="min-h-screen overflow-y-auto pt-[60px] px-10 py-5 bg-[#111019] text-white">
                 <h1 className="text-3xl font-bold mb-6">Alumni Directory</h1>
 
                 {/* Filter and Search Bar */}
                 <AlumniFilterBar filters={filters} onFilterChange={handleFilterChange} />
 
                 <div className="alumni-results my-6">
-                    <h2 className="text-xl font-semibold mb-4 text-gray-700">
+                    <h2 className="text-xl font-semibold mb-4 text-white">
                         Alumni Results
                     </h2>
-                    
+
                     {totalResults > 0 && (
-                        <p className="text-sm text-gray-500 mb-4">
+                        <p className="text-sm text-gray-300 mb-4">
                             Showing {currentPageStart}-{currentPageEnd} of {totalResults} results
                         </p>
                     )}
 
                     {/* Action buttons */}
                     <div className="flex space-x-4 mb-6">
-                        <button 
-                            className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-100"
+                        <button
+                            className="px-4 py-2 border border-gray-600 rounded text-gray-300 hover:bg-gray-700"
                             onClick={handleExport}
                         >
                             <i className="fas fa-download mr-2"></i> Export
                         </button>
-                        <button onClick={() => setIsInviteModalOpen(true)} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                            <i className="fas fa-user-plus mr-2"></i> Invite Alumni
-                        </button>
+                        {userRole === 'admin' && (
+                            <button onClick={() => setIsInviteModalOpen(true)} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                                <i className="fas fa-user-plus mr-2"></i> Invite Alumni
+                            </button>
+                        )}
                     </div>
 
                     {/* Alumni Grid */}
                     {loading ? (
-                        <p>Loading...</p>
+                        <p className="text-white">Loading...</p>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                             {alumniData.map(alumnus => (
                                 <AlumniCard key={alumnus.id} alumnus={alumnus} />
                             ))}
-                            
+
                             {alumniData.length === 0 && (
-                                <p className="text-gray-500">No alumni found matching your criteria.</p>
+                                <p className="text-gray-400">No alumni found matching your criteria.</p>
                             )}
                         </div>
                     )}
@@ -144,9 +149,9 @@ const AlumniDirectory = () => {
                     {/* Pagination Controls (Placeholder for future implementation) */}
                     {totalResults > LIMIT && (
                         <div className="flex justify-center mt-6 space-x-4">
-                            <button disabled={page === 1} className="px-4 py-2 border rounded">Previous</button>
-                            <span className="py-2">Page {page}</span>
-                            <button disabled={page * LIMIT >= totalResults} className="px-4 py-2 border rounded">Next</button>
+                            <button disabled={page === 1} className="px-4 py-2 border border-gray-600 rounded text-gray-300 hover:bg-gray-700">Previous</button>
+                            <span className="py-2 text-white">Page {page}</span>
+                            <button disabled={page * LIMIT >= totalResults} className="px-4 py-2 border border-gray-600 rounded text-gray-300 hover:bg-gray-700">Next</button>
                         </div>
                     )}
                 </div>
@@ -157,8 +162,8 @@ const AlumniDirectory = () => {
                     onSubmit={handleInviteSubmit}
                 />
             )}
-        </div>
+        </>
     );
 };
 
-export default AlumniDirectory;
+export default withSidebarToggle(AlumniDirectory);
