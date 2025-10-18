@@ -35,6 +35,7 @@ import AlumniProfilePage from './pages/AlumniProfilePage';
 import StudentDirectory from './pages/StudentDirectory';
 import StudentProfilePage from './pages/StudentProfilePage';
 import Messages from './pages/Messages';
+import MentorshipDashboard from './pages/MentorshipDashboard';
 
 // --- WRAP FEATURE COMPONENTS WITH HOC ---
 const LayoutHome = withSidebarToggle(Home);
@@ -51,6 +52,7 @@ const LayoutAlumniProfilePage = withSidebarToggle(AlumniProfilePage);
 const LayoutStudentDirectory = withSidebarToggle(StudentDirectory);
 const LayoutStudentProfilePage = withSidebarToggle(StudentProfilePage);
 const LayoutMessages = withSidebarToggle(Messages);
+const LayoutMentorshipDashboard = withSidebarToggle(MentorshipDashboard);
 
 
 // --- Helper Function (Placeholder for your user authentication logic) ---
@@ -99,7 +101,10 @@ const App = () => {
                 {/* Events Routes (From merged branch) */}
                 <Route path="/events" element={<LayoutEvents />} />
                 <Route path="/events/new" element={<LayoutCreateEventForm />} />
-                
+
+                {/* Mentorship Dashboard */}
+                <Route path="/mentorship" element={<LayoutMentorshipDashboard />} />
+
                 {/* --- AUTH ROUTES --- */}
                 <Route path="/login/admin" element={<AdminLogin />} />
                 <Route path="/login/alumni" element={<AlumniLogin />} />
