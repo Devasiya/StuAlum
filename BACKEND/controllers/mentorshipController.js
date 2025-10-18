@@ -1,9 +1,10 @@
 const MentorshipRequest = require('../models/MentorshipRequest');
-const User = require('../models/User');
+const MentorshipMatch = require('../models/MentorshipMatch');
 const AlumniProfile = require('../models/AlumniProfile');
 const AdminProfile = require('../models/AdminProfile');
 const StudentProfile = require('../models/StudentProfile');
 const { MailerSend, EmailParams, Sender, Recipient } = require('mailersend');
+const mongoose = require('mongoose');
 
 // Create a mentorship request
 exports.createMentorshipRequest = async (req, res) => {
@@ -48,10 +49,10 @@ exports.createMentorshipRequest = async (req, res) => {
         let menteeProfile = null;
         let menteeEmail = null;
         if (req.user.role === 'student') {
-            menteeProfile = await StudentProfile.findOne({ user_id: mentee_id });
+            menteeProfile = await StudentProfile.findById(mentee_id);
             menteeEmail = menteeProfile?.email || 'unknown@email.com';
         } else if (req.user.role === 'alumni') {
-            menteeProfile = await AlumniProfile.findOne({ user_id: mentee_id });
+            menteeProfile = await AlumniProfile.findById(mentee_id);
             menteeEmail = menteeProfile?.email || 'unknown@email.com';
         } else {
             // For admin or other roles, we might not have a profile, but let's assume they have an email
@@ -101,44 +102,33 @@ exports.createMentorshipRequest = async (req, res) => {
 exports.getMentorshipRequests = async (req, res) => {
     try {
         const userId = req.user.id;
-        const user = await User.findById(userId);
+        const user = await AlumniProfile.findById(userId);
 
-        if (user.role !== 'alumni') {
+        if (!user) {
             return res.status(403).json({ message: 'Only alumni can receive mentorship requests' });
         }
 
         const requests = await MentorshipRequest.find({ mentor_id: userId, status: 'requested' })
-            .populate('mentee_id', 'email role')
+            .populate('mentee_id', 'email full_name profile_photo_url current_position company')
             .sort({ created_at: -1 });
 
         // Get profiles for mentees
-        const requestsWithProfiles = await Promise.all(
-            requests.map(async (request) => {
-                const mentee = request.mentee_id;
-                let profile = null;
-
-                if (mentee.role === 'student') {
-                    profile = await StudentProfile.findOne({ user_id: mentee._id });
-                } else if (mentee.role === 'alumni') {
-                    profile = await AlumniProfile.findOne({ user_id: mentee._id });
-                }
-
-                return {
-                    _id: request._id,
-                    mentee: {
-                        _id: mentee._id,
-                        email: mentee.email,
-                        role: mentee.role,
-                        full_name: profile?.full_name || mentee.email,
-                        profile_photo_url: profile?.profile_photo_url,
-                        current_position: profile?.current_position,
-                        company: profile?.company
-                    },
-                    status: request.status,
-                    created_at: request.created_at
-                };
-            })
-        );
+        const requestsWithProfiles = requests.map((request) => {
+            const mentee = request.mentee_id;
+            return {
+                _id: request._id,
+                mentee: {
+                    _id: mentee._id,
+                    email: mentee.email,
+                    full_name: mentee.full_name,
+                    profile_photo_url: mentee.profile_photo_url,
+                    current_position: mentee.current_position,
+                    company: mentee.company
+                },
+                status: request.status,
+                created_at: request.created_at
+            };
+        });
 
         res.status(200).json(requestsWithProfiles);
     } catch (error) {
@@ -174,16 +164,12 @@ exports.respondToMentorshipRequest = async (req, res) => {
         await request.save();
 
         // Get mentee details for notification
-        const menteeUser = await User.findById(request.mentee_id);
-        let menteeProfile = null;
-        if (menteeUser.role === 'student') {
-            menteeProfile = await StudentProfile.findOne({ user_id: request.mentee_id });
-        } else if (menteeUser.role === 'alumni') {
-            menteeProfile = await AlumniProfile.findOne({ user_id: request.mentee_id });
-        }
+        const menteeUser = await StudentProfile.findById(request.mentee_id);
+        let menteeProfile = menteeUser;
+        let menteeEmail = menteeUser?.email || 'unknown@email.com';
 
         // Get mentor details
-        const mentorProfile = await AlumniProfile.findOne({ user_id: userId });
+        const mentorProfile = await AlumniProfile.findById(userId);
 
         // Send notification email to mentee
         try {
@@ -228,41 +214,30 @@ exports.respondToMentorshipRequest = async (req, res) => {
 exports.getMentorshipConnections = async (req, res) => {
     try {
         const userId = req.user.id;
-        const user = await User.findById(userId);
+        const userRole = req.user.role;
 
         let connections = [];
 
-        if (user.role === 'alumni') {
+        if (userRole === 'alumni') {
             // Get mentees (accepted requests where user is mentor)
             const menteeRequests = await MentorshipRequest.find({
                 mentor_id: userId,
                 status: 'accepted'
-            }).populate('mentee_id', 'email role');
+            }).populate('mentee_id', 'email full_name profile_photo_url current_position company');
 
-            const mentees = await Promise.all(
-                menteeRequests.map(async (request) => {
-                    const mentee = request.mentee_id;
-                    let profile = null;
-
-                    if (mentee.role === 'student') {
-                        profile = await StudentProfile.findOne({ user_id: mentee._id });
-                    } else if (mentee.role === 'alumni') {
-                        profile = await AlumniProfile.findOne({ user_id: mentee._id });
-                    }
-
-                    return {
-                        _id: mentee._id,
-                        email: mentee.email,
-                        role: mentee.role,
-                        full_name: profile?.full_name || mentee.email,
-                        profile_photo_url: profile?.profile_photo_url,
-                        current_position: profile?.current_position,
-                        company: profile?.company,
-                        relationship: 'mentee',
-                        connected_at: request.created_at
-                    };
-                })
-            );
+            const mentees = menteeRequests.map((request) => {
+                const mentee = request.mentee_id;
+                return {
+                    _id: mentee._id,
+                    email: mentee.email,
+                    full_name: mentee.full_name,
+                    profile_photo_url: mentee.profile_photo_url,
+                    current_position: mentee.current_position,
+                    company: mentee.company,
+                    relationship: 'mentee',
+                    connected_at: request.created_at
+                };
+            });
 
             connections.push(...mentees);
         }
@@ -271,26 +246,21 @@ exports.getMentorshipConnections = async (req, res) => {
         const mentorRequests = await MentorshipRequest.find({
             mentee_id: userId,
             status: 'accepted'
-        }).populate('mentor_id', 'email role');
+        }).populate('mentor_id', 'email full_name profile_photo_url current_position company');
 
-        const mentors = await Promise.all(
-            mentorRequests.map(async (request) => {
-                const mentor = request.mentor_id;
-                const profile = await AlumniProfile.findOne({ user_id: mentor._id });
-
-                return {
-                    _id: mentor._id,
-                    email: mentor.email,
-                    role: mentor.role,
-                    full_name: profile?.full_name || mentor.email,
-                    profile_photo_url: profile?.profile_photo_url,
-                    current_position: profile?.current_position,
-                    company: profile?.company,
-                    relationship: 'mentor',
-                    connected_at: request.created_at
-                };
-            })
-        );
+        const mentors = mentorRequests.map((request) => {
+            const mentor = request.mentor_id;
+            return {
+                _id: mentor._id,
+                email: mentor.email,
+                full_name: mentor.full_name,
+                profile_photo_url: mentor.profile_photo_url,
+                current_position: mentor.current_position,
+                company: mentor.company,
+                relationship: 'mentor',
+                connected_at: request.created_at
+            };
+        });
 
         connections.push(...mentors);
 
@@ -301,5 +271,303 @@ exports.getMentorshipConnections = async (req, res) => {
     } catch (error) {
         console.error('Error fetching mentorship connections:', error);
         res.status(500).json({ message: 'Server error while fetching mentorship connections' });
+    }
+};
+
+// Get AI-matched mentors for the student
+exports.getMentorshipMatches = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const userRole = req.user.role;
+
+        if (userRole !== 'student') {
+            return res.status(403).json({ message: 'Only students can access mentorship matches' });
+        }
+
+        // Convert userId to ObjectId for database queries
+        const userObjectId = new mongoose.Types.ObjectId(userId);
+
+        // Get student's profile for matching criteria
+        const studentProfile = await StudentProfile.findById(userObjectId);
+        if (!studentProfile) {
+            return res.status(404).json({ message: 'Student profile not found' });
+        }
+
+        // Mock AI matching logic: Find alumni matches based on student's interests
+        // In a real implementation, this would use ML algorithms
+        const matches = await MentorshipMatch.find({ mentee_id: userObjectId, status: 'active' })
+            .populate('mentor_id', 'email full_name profile_photo_url current_position company skills graduation_year')
+            .sort({ ai_score: -1 })
+            .limit(10);
+
+        const matchResults = matches.map((match) => {
+            const mentor = match.mentor_id;
+            return {
+                _id: mentor._id,
+                email: mentor.email,
+                full_name: mentor.full_name,
+                profile_photo_url: mentor.profile_photo_url,
+                current_position: mentor.current_position,
+                company: mentor.company,
+                skills: mentor.skills || [],
+                graduation_year: mentor.graduation_year,
+                ai_score: match.ai_score,
+                match_reason: match.match_reason,
+                rating: 4.9, // Mocked
+                mentee_count: 12 // Mocked
+            };
+        });
+
+        // If no matches found, return mock data for development
+        if (matchResults.length === 0) {
+            const mockMatches = [
+                {
+                    _id: 'mock1',
+                    email: 'john.doe@example.com',
+                    full_name: 'John Doe',
+                    profile_photo_url: '/default-avatar.png',
+                    current_position: 'Senior Software Engineer',
+                    company: 'Tech Corp',
+                    skills: ['JavaScript', 'React', 'Node.js'],
+                    graduation_year: 2015,
+                    ai_score: 85,
+                    match_reason: 'Shared interest in Web Development',
+                    rating: 4.9,
+                    mentee_count: 12
+                },
+                {
+                    _id: 'mock2',
+                    email: 'jane.smith@example.com',
+                    full_name: 'Jane Smith',
+                    profile_photo_url: '/default-avatar.png',
+                    current_position: 'Product Manager',
+                    company: 'Startup Inc',
+                    skills: ['Product Strategy', 'Agile', 'Leadership'],
+                    graduation_year: 2010,
+                    ai_score: 78,
+                    match_reason: 'Career guidance in Product Management',
+                    rating: 4.8,
+                    mentee_count: 8
+                }
+            ];
+            return res.status(200).json(mockMatches);
+        }
+
+        res.status(200).json(matchResults);
+    } catch (error) {
+        console.error('Error fetching mentorship matches:', error);
+        res.status(500).json({ message: 'Server error while fetching mentorship matches' });
+    }
+};
+
+// Smart match endpoint with AI matching algorithm
+exports.smartMatchMentors = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const userRole = req.user.role;
+        const { requirements, filters } = req.body;
+
+        if (userRole !== 'student') {
+            return res.status(403).json({ message: 'Only students can access mentorship matches' });
+        }
+
+        // Get student's profile
+        const studentProfile = await StudentProfile.findById(userId);
+        if (!studentProfile) {
+            return res.status(404).json({ message: 'Student profile not found' });
+        }
+
+        // Build query for alumni based on filters
+        let query = { is_verified: true };
+
+        if (filters.industry) {
+            query.industry = filters.industry;
+        }
+
+        if (filters.location) {
+            query.location = new RegExp(filters.location, 'i');
+        }
+
+        if (filters.alumniYear) {
+            query.graduation_year = parseInt(filters.alumniYear);
+        }
+
+        // Find potential mentors
+        let potentialMentors = await AlumniProfile.find(query).limit(50);
+
+        // AI Matching Algorithm
+        const matches = potentialMentors.map(mentor => {
+            let score = 0;
+            let reasons = [];
+
+            // Skills matching
+            if (studentProfile.skills && mentor.skills) {
+                const studentSkills = studentProfile.skills.map(s => s.toLowerCase());
+                const mentorSkills = mentor.skills.map(s => s.toLowerCase());
+                const commonSkills = studentSkills.filter(skill => mentorSkills.includes(skill));
+                score += commonSkills.length * 15;
+                if (commonSkills.length > 0) {
+                    reasons.push(`Shared skills: ${commonSkills.join(', ')}`);
+                }
+            }
+
+            // Career goals matching
+            if (studentProfile.career_goals && requirements) {
+                const goals = studentProfile.career_goals.toLowerCase();
+                const reqs = requirements.toLowerCase();
+                if (goals.includes(reqs) || reqs.includes(goals)) {
+                    score += 20;
+                    reasons.push('Career goals alignment');
+                }
+            }
+
+            // Industry matching
+            if (studentProfile.branch && mentor.industry) {
+                const branch = studentProfile.branch.toLowerCase();
+                const industry = mentor.industry.toLowerCase();
+                if (branch.includes(industry) || industry.includes(branch)) {
+                    score += 10;
+                    reasons.push('Industry relevance');
+                }
+            }
+
+            // Experience level matching
+            if (mentor.years_of_experience) {
+                if (mentor.years_of_experience >= 5) score += 10;
+                if (mentor.years_of_experience >= 10) score += 5;
+                reasons.push(`${mentor.years_of_experience} years of experience`);
+            }
+
+            // Graduation year proximity
+            if (mentor.graduation_year && studentProfile.year_of_graduation) {
+                const yearDiff = Math.abs(mentor.graduation_year - studentProfile.year_of_graduation);
+                if (yearDiff <= 5) score += 5;
+                if (yearDiff <= 2) score += 5;
+            }
+
+            // Role matching
+            if (filters.role && mentor.current_position) {
+                const roleMatch = mentor.current_position.toLowerCase().includes(filters.role.toLowerCase());
+                if (roleMatch) {
+                    score += 10;
+                    reasons.push(`Role match: ${mentor.current_position}`);
+                }
+            }
+
+            // Skills filter matching
+            if (filters.skills) {
+                const filterSkills = filters.skills.toLowerCase().split(',').map(s => s.trim());
+                const mentorSkills = mentor.skills.map(s => s.toLowerCase());
+                const skillMatches = filterSkills.filter(skill => mentorSkills.some(ms => ms.includes(skill)));
+                score += skillMatches.length * 8;
+                if (skillMatches.length > 0) {
+                    reasons.push(`Skill matches: ${skillMatches.join(', ')}`);
+                }
+            }
+
+            // Ensure minimum score
+            score = Math.max(score, 10);
+
+            return {
+                mentor,
+                score: Math.min(score, 100), // Cap at 100
+                reasons
+            };
+        });
+
+        // Sort by score and take top matches
+        matches.sort((a, b) => b.score - a.score);
+        const topMatches = matches.slice(0, 10);
+
+        // Format response
+        const matchResults = topMatches.map(match => {
+            const mentor = match.mentor;
+            return {
+                _id: mentor._id,
+                email: mentor.email,
+                full_name: mentor.full_name,
+                profile_photo_url: mentor.profile_photo_url,
+                current_position: mentor.current_position,
+                company: mentor.company,
+                skills: mentor.skills || [],
+                graduation_year: mentor.graduation_year,
+                ai_score: match.score,
+                match_reason: match.reasons.join(', '),
+                rating: 4.5 + (Math.random() * 0.5), // Mock rating
+                mentee_count: Math.floor(Math.random() * 20) + 1 // Mock mentee count
+            };
+        });
+
+        res.status(200).json(matchResults);
+    } catch (error) {
+        console.error('Error in smart match:', error);
+        res.status(500).json({ message: 'Server error while performing smart match' });
+    }
+};
+
+// Get outgoing mentorship requests for the student
+exports.getOutgoingRequests = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const userRole = req.user.role;
+
+        if (userRole !== 'student') {
+            return res.status(403).json({ message: 'Only students can access outgoing requests' });
+        }
+
+        const requests = await MentorshipRequest.find({
+            mentee_id: userId,
+            status: 'requested'
+        }).populate('mentor_id', 'email full_name profile_photo_url current_position company');
+
+        const requestResults = requests.map((request) => {
+            const mentor = request.mentor_id;
+            return {
+                _id: request._id,
+                mentor: {
+                    _id: mentor._id,
+                    email: mentor.email,
+                    full_name: mentor.full_name,
+                    profile_photo_url: mentor.profile_photo_url,
+                    current_position: mentor.current_position,
+                    company: mentor.company
+                },
+                status: request.status,
+                created_at: request.created_at
+            };
+        });
+
+        res.status(200).json(requestResults);
+    } catch (error) {
+        console.error('Error fetching outgoing requests:', error);
+        res.status(500).json({ message: 'Server error while fetching outgoing requests' });
+    }
+};
+
+// Cancel a mentorship request
+exports.cancelMentorshipRequest = async (req, res) => {
+    try {
+        const { requestId } = req.body;
+        const userId = req.user.id;
+
+        const request = await MentorshipRequest.findById(requestId);
+        if (!request) {
+            return res.status(404).json({ message: 'Mentorship request not found' });
+        }
+
+        if (request.mentee_id.toString() !== userId) {
+            return res.status(403).json({ message: 'You can only cancel your own requests' });
+        }
+
+        if (request.status !== 'requested') {
+            return res.status(400).json({ message: 'This request cannot be cancelled' });
+        }
+
+        await MentorshipRequest.findByIdAndDelete(requestId);
+
+        res.status(200).json({ message: 'Mentorship request cancelled successfully' });
+    } catch (error) {
+        console.error('Error cancelling mentorship request:', error);
+        res.status(500).json({ message: 'Server error while cancelling mentorship request' });
     }
 };
