@@ -11,7 +11,12 @@ const {
     getMentorshipMatches,
     getOutgoingRequests,
     cancelMentorshipRequest,
-    smartMatchMentors
+    smartMatchMentors,
+    getMentorshipHistory,
+    getMentorshipPreferences,
+    updateMentorshipPreferences,
+    scheduleMentorshipSession,
+    getScheduledSessions
 } = require('../controllers/mentorshipController');
 
 // --- Apply Auth Middleware ---
@@ -51,5 +56,25 @@ router.get('/outgoing', getOutgoingRequests);
 // POST /api/mentorship/cancel
 // Cancels a mentorship request
 router.post('/cancel', cancelMentorshipRequest);
+
+// GET /api/mentorship/history
+// Gets mentorship history for alumni
+router.get('/history', getMentorshipHistory);
+
+// GET /api/mentorship/preferences
+// Gets mentorship preferences for alumni
+router.get('/preferences', getMentorshipPreferences);
+
+// PUT /api/mentorship/preferences
+// Updates mentorship preferences for alumni
+router.put('/preferences', updateMentorshipPreferences);
+
+// POST /api/mentorship/schedule-session
+// Schedules a mentorship session
+router.post('/schedule-session', scheduleMentorshipSession);
+
+// GET /api/mentorship/scheduled-sessions
+// Gets scheduled sessions for alumni
+router.get('/scheduled-sessions', getScheduledSessions);
 
 module.exports = router;

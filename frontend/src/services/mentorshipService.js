@@ -50,6 +50,36 @@ const mentorshipService = {
     respondToMentorshipRequest: async (requestId, action) => {
         const response = await api.post('/mentorship/respond', { requestId, action });
         return response.data;
+    },
+
+    // Get mentorship history for alumni
+    getMentorshipHistory: async () => {
+        const response = await api.get('/mentorship/history');
+        return response.data;
+    },
+
+    // Get mentorship preferences for alumni
+    getMentorshipPreferences: async () => {
+        const response = await api.get('/mentorship/preferences');
+        return response.data;
+    },
+
+    // Update mentorship preferences for alumni
+    updateMentorshipPreferences: async (preferences) => {
+        const response = await api.put('/mentorship/preferences', preferences);
+        return response.data;
+    },
+
+    // Schedule a mentorship session
+    scheduleMentorshipSession: async (sessionData) => {
+        const response = await api.post('/mentorship/schedule-session', sessionData);
+        return response.data;
+    },
+
+    // Get scheduled sessions for alumni
+    getScheduledSessions: async () => {
+        const response = await api.get('/mentorship/scheduled-sessions');
+        return response.data;
     }
 };
 
