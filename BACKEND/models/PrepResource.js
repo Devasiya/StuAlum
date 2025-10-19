@@ -7,6 +7,7 @@ const PrepResourceSchema = new mongoose.Schema({
   description: String,
   difficulty: String,
   tags: [String],
+  category: { type: String, default: 'prep' }, // 'prep' or 'mentorship'
   created_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 

@@ -12,11 +12,22 @@ const {
     getOutgoingRequests,
     cancelMentorshipRequest,
     smartMatchMentors,
+    completeMentorship,
     getMentorshipHistory,
     getMentorshipPreferences,
     updateMentorshipPreferences,
     scheduleMentorshipSession,
-    getScheduledSessions
+    getScheduledSessions,
+    getScheduledSessionsForStudent,
+    cancelMentorshipSession,
+    updateMentorshipSession,
+    createOrGetConversation,
+    sendMessage,
+    getConversations,
+    getMessages,
+    uploadMentorshipResource,
+    getMentorshipResources,
+    deleteMentorshipResource
 } = require('../controllers/mentorshipController');
 
 // --- Apply Auth Middleware ---
@@ -57,6 +68,10 @@ router.get('/outgoing', getOutgoingRequests);
 // Cancels a mentorship request
 router.post('/cancel', cancelMentorshipRequest);
 
+// POST /api/mentorship/complete
+// Completes a mentorship relationship
+router.post('/complete', completeMentorship);
+
 // GET /api/mentorship/history
 // Gets mentorship history for alumni
 router.get('/history', getMentorshipHistory);
@@ -76,5 +91,46 @@ router.post('/schedule-session', scheduleMentorshipSession);
 // GET /api/mentorship/scheduled-sessions
 // Gets scheduled sessions for alumni
 router.get('/scheduled-sessions', getScheduledSessions);
+
+// GET /api/mentorship/scheduled-sessions-student
+// Gets scheduled sessions for students
+router.get('/scheduled-sessions-student', getScheduledSessionsForStudent);
+
+// POST /api/mentorship/cancel-session
+// Cancels a scheduled mentorship session
+router.post('/cancel-session', cancelMentorshipSession);
+
+// PUT /api/mentorship/update-session
+// Updates a scheduled mentorship session
+router.put('/update-session', updateMentorshipSession);
+
+// POST /api/mentorship/conversation
+// Creates or gets a conversation between mentor and mentee
+router.post('/conversation', createOrGetConversation);
+
+// POST /api/mentorship/message
+// Sends a message in a conversation
+router.post('/message', sendMessage);
+
+// GET /api/mentorship/conversations
+// Gets all conversations for the authenticated user
+router.get('/conversations', getConversations);
+
+// GET /api/mentorship/messages/:conversationId
+// Gets messages for a specific conversation
+router.get('/messages/:conversationId', getMessages);
+
+// POST /api/mentorship/upload-resource
+// Uploads a mentorship resource (alumni only)
+const upload = require('../middleware/uploadMiddleware');
+router.post('/upload-resource', upload.single('file'), uploadMentorshipResource);
+
+// GET /api/mentorship/resources
+// Gets all mentorship resources (for students)
+router.get('/resources', getMentorshipResources);
+
+// DELETE /api/mentorship/resources/:resourceId
+// Deletes a mentorship resource (alumni only)
+router.delete('/resources/:resourceId', deleteMentorshipResource);
 
 module.exports = router;

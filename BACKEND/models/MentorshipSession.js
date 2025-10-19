@@ -6,6 +6,7 @@ const MentorshipSessionSchema = new mongoose.Schema({
   duration: { type: Number, required: true },  // session duration, e.g. in minutes
   mode: { type: String, enum: ['virtual', 'in_person', 'hybrid'], required: true },
   topic: { type: String },
+  meeting_link: { type: String },
   status: { type: String, enum: ['upcoming', 'completed', 'rescheduled', 'cancelled'], default: 'upcoming' },
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 

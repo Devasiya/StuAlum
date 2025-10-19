@@ -80,6 +80,76 @@ const mentorshipService = {
     getScheduledSessions: async () => {
         const response = await api.get('/mentorship/scheduled-sessions');
         return response.data;
+    },
+
+    // Get scheduled sessions for students
+    getScheduledSessionsForStudent: async () => {
+        const response = await api.get('/mentorship/scheduled-sessions-student');
+        return response.data;
+    },
+
+    // Complete a mentorship relationship
+    completeMentorship: async (requestId) => {
+        const response = await api.post('/mentorship/complete', { requestId });
+        return response.data;
+    },
+
+    // Cancel a scheduled mentorship session
+    cancelMentorshipSession: async (sessionId) => {
+        const response = await api.post('/mentorship/cancel-session', { sessionId });
+        return response.data;
+    },
+
+    // Update a scheduled mentorship session
+    updateMentorshipSession: async (sessionData) => {
+        const response = await api.put('/mentorship/update-session', sessionData);
+        return response.data;
+    },
+
+    // Create or get conversation between mentor and mentee
+    createOrGetConversation: async (otherUserId) => {
+        const response = await api.post('/mentorship/conversation', { otherUserId });
+        return response.data;
+    },
+
+    // Send a message in a conversation
+    sendMessage: async (conversationId, messageText) => {
+        const response = await api.post('/mentorship/message', { conversationId, messageText });
+        return response.data;
+    },
+
+    // Get all conversations for the user
+    getConversations: async () => {
+        const response = await api.get('/mentorship/conversations');
+        return response.data;
+    },
+
+    // Get messages for a specific conversation
+    getMessages: async (conversationId) => {
+        const response = await api.get(`/mentorship/messages/${conversationId}`);
+        return response.data;
+    },
+
+    // Upload a mentorship resource (alumni only)
+    uploadMentorshipResource: async (formData) => {
+        const response = await api.post('/mentorship/upload-resource', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    },
+
+    // Get all mentorship resources (for students)
+    getMentorshipResources: async () => {
+        const response = await api.get('/mentorship/resources');
+        return response.data;
+    },
+
+    // Delete a mentorship resource (alumni only)
+    deleteMentorshipResource: async (resourceId) => {
+        const response = await api.delete(`/mentorship/resources/${resourceId}`);
+        return response.data;
     }
 };
 

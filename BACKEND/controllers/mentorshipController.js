@@ -1,9 +1,12 @@
 const MentorshipRequest = require('../models/MentorshipRequest');
 const MentorshipPreference = require('../models/MentorshipPreference');
 const MentorshipSession = require('../models/MentorshipSession');
+const Conversation = require('../models/Conservation');
+const Message = require('../models/Message');
 const User = require('../models/User');
 const AlumniProfile = require('../models/AlumniProfile');
 const StudentProfile = require('../models/StudentProfile');
+const PrepResource = require('../models/PrepResource');
 const NLP_SERVICE = require('../utils/nlpService');
 const UTILS = require('../utils/mentorshipUtils');
 
@@ -48,11 +51,24 @@ exports.getMentorshipRequests = async (req, res) => {
             .populate({
                 path: 'mentee_id',
                 select: 'email full_name profile_photo_url current_position company',
-                model: 'AlumniProfile'
+                model: 'StudentProfile'
             })
             .sort({ created_at: -1 });
 
-        res.status(200).json(requests);
+        const enrichedRequests = requests.map((req) => ({
+            _id: req._id,
+            mentee_id: {
+                _id: req.mentee_id._id,
+                email: req.mentee_id.email,
+                full_name: req.mentee_id.full_name,
+                profile_photo_url: req.mentee_id.profile_photo_url,
+                current_position: req.mentee_id.current_position,
+                company: req.mentee_id.company
+            },
+            created_at: req.created_at
+        }));
+
+        res.status(200).json(enrichedRequests);
     } catch (error) {
         console.error('Error fetching mentorship requests:', error);
         res.status(500).json({ message: 'Server error while fetching requests' });
@@ -107,7 +123,7 @@ exports.getMentorshipConnections = async (req, res) => {
             .populate({
                 path: 'mentee_id',
                 select: 'email full_name profile_photo_url current_position company',
-                model: 'AlumniProfile'
+                model: 'StudentProfile'
             });
         } else if (userRole === 'alumni') {
             // Alumni sees their mentees
@@ -123,7 +139,7 @@ exports.getMentorshipConnections = async (req, res) => {
             .populate({
                 path: 'mentee_id',
                 select: 'email full_name profile_photo_url current_position company',
-                model: 'AlumniProfile'
+                model: 'StudentProfile'
             });
         }
 
@@ -331,6 +347,37 @@ exports.cancelMentorshipRequest = async (req, res) => {
     }
 };
 
+// Complete a mentorship relationship
+exports.completeMentorship = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const userRole = req.user.role;
+        const { requestId } = req.body;
+
+        if (userRole !== 'alumni') {
+            return res.status(403).json({ message: 'Only alumni can complete mentorships' });
+        }
+
+        const request = await MentorshipRequest.findOne({
+            _id: requestId,
+            mentor_id: userId,
+            status: 'accepted'
+        });
+
+        if (!request) {
+            return res.status(404).json({ message: 'Mentorship relationship not found' });
+        }
+
+        request.status = 'completed';
+        await request.save();
+
+        res.status(200).json({ message: 'Mentorship completed successfully' });
+    } catch (error) {
+        console.error('Error completing mentorship:', error);
+        res.status(500).json({ message: 'Server error while completing mentorship' });
+    }
+};
+
 // Get mentorship history for alumni (completed relationships)
 exports.getMentorshipHistory = async (req, res) => {
     try {
@@ -344,16 +391,14 @@ exports.getMentorshipHistory = async (req, res) => {
         // Get completed mentorship relationships where user was mentor
         const completedRequests = await MentorshipRequest.find({
             mentor_id: userId,
-            status: 'accepted'
+            status: 'completed'
         }).populate({
             path: 'mentee_id',
             select: 'email full_name profile_photo_url current_position company',
-            model: 'AlumniProfile'
+            model: 'StudentProfile'
         });
 
-        // For now, we'll consider all accepted requests as "completed" since we don't have an explicit "completed" status
-        // In a real implementation, you might want to add a "completed" status or track sessions
-        const history = completedRequests.map((request) => {
+        const history = completedRequests.filter(request => request.mentee_id).map((request) => {
             const mentee = request.mentee_id;
             return {
                 _id: request._id,
@@ -365,9 +410,9 @@ exports.getMentorshipHistory = async (req, res) => {
                     current_position: mentee.current_position,
                     company: mentee.company
                 },
-                status: 'completed', // Assuming all accepted are completed for now
+                status: 'completed',
                 connected_at: request.created_at,
-                completed_at: request.updated_at // Using updated_at as completion date
+                completed_at: request.updated_at
             };
         });
 
@@ -450,7 +495,7 @@ exports.scheduleMentorshipSession = async (req, res) => {
     try {
         const userId = req.user.id;
         const userRole = req.user.role;
-        const { mentee_id, scheduled_time, duration, mode, topic } = req.body;
+        const { mentee_id, scheduled_date, scheduled_time, duration, mode, topic, meeting_link } = req.body;
 
         if (userRole !== 'alumni') {
             return res.status(403).json({ message: 'Only alumni can schedule sessions' });
@@ -467,13 +512,17 @@ exports.scheduleMentorshipSession = async (req, res) => {
             return res.status(403).json({ message: 'You can only schedule sessions with your mentees' });
         }
 
+        // Combine date and time into a single Date object
+        const scheduledDateTime = new Date(`${scheduled_date}T${scheduled_time}`);
+
         // Create a mentorship session (assuming MentorshipSession model exists)
         const session = new MentorshipSession({
             match_id: connection._id, // Using request ID as match ID for now
-            scheduled_time,
+            scheduled_time: scheduledDateTime,
             duration,
             mode,
-            topic
+            topic,
+            meeting_link: meeting_link || ''
         });
 
         await session.save();
@@ -504,35 +553,553 @@ exports.getScheduledSessions = async (req, res) => {
             status: 'accepted'
         });
 
+        console.log('Found connections:', connections.length);
         const matchIds = connections.map(conn => conn._id);
+        console.log('Match IDs:', matchIds);
 
         // Get sessions for these matches
         const sessions = await MentorshipSession.find({
             match_id: { $in: matchIds },
             status: { $in: ['upcoming', 'rescheduled'] }
-        }).populate('match_id', 'mentee_id').sort({ scheduled_time: 1 });
+        }).sort({ scheduled_time: 1 });
 
-        // Enrich with mentee details
+        console.log('Found sessions:', sessions.length);
+        console.log('Sessions:', sessions.map(s => ({ id: s._id, match_id: s.match_id, status: s.status })));
+
+        // Enrich with mentee details using the connections we already have
         const enrichedSessions = await Promise.all(sessions.map(async (session) => {
-            const connection = await MentorshipRequest.findById(session.match_id).populate({
-                path: 'mentee_id',
-                select: 'full_name profile_photo_url current_position company',
-                model: 'AlumniProfile'
-            });
-            return {
-                _id: session._id,
-                mentee: connection.mentee_id,
-                scheduled_time: session.scheduled_time,
-                duration: session.duration,
-                mode: session.mode,
-                topic: session.topic,
-                status: session.status
-            };
+            const connection = connections.find(conn => conn._id.toString() === session.match_id.toString());
+
+            // Handle case where connection might not exist
+            if (!connection) {
+                console.log('No connection found for session:', session._id, 'match_id:', session.match_id);
+                return null; // Skip this session if connection is invalid
+            }
+
+            const studentProfile = await StudentProfile.findById(connection.mentee_id);
+
+            if (studentProfile) {
+                return {
+                    _id: session._id,
+                    mentee: {
+                        _id: studentProfile._id,
+                        full_name: studentProfile.full_name,
+                        profile_photo_url: studentProfile.profile_photo_url,
+                        current_position: studentProfile.current_position,
+                        company: studentProfile.company
+                    },
+                    scheduled_date: session.scheduled_time.toISOString().split('T')[0],
+                    scheduled_time: session.scheduled_time.toTimeString().slice(0, 5),
+                    duration: session.duration,
+                    mode: session.mode,
+                    topic: session.topic,
+                    meeting_link: session.meeting_link,
+                    status: session.status
+                };
+            } else {
+                // Use unknown if no profile exists
+                console.log('No student profile found for connection:', connection._id, 'mentee_id:', connection.mentee_id);
+                return {
+                    _id: session._id,
+                    mentee: {
+                        _id: connection.mentee_id,
+                        full_name: 'Unknown',
+                        profile_photo_url: '',
+                        current_position: '',
+                        company: ''
+                    },
+                    scheduled_date: session.scheduled_time.toISOString().split('T')[0],
+                    scheduled_time: session.scheduled_time.toTimeString().slice(0, 5),
+                    duration: session.duration,
+                    mode: session.mode,
+                    topic: session.topic,
+                    status: session.status
+                };
+            }
         }));
 
-        res.status(200).json(enrichedSessions);
+        // Filter out null sessions
+        const validSessions = enrichedSessions.filter(session => session !== null);
+        console.log('Valid sessions to return:', validSessions.length);
+
+        res.status(200).json(validSessions);
     } catch (error) {
         console.error('Error fetching scheduled sessions:', error);
         res.status(500).json({ message: 'Server error while fetching sessions' });
+    }
+};
+
+// Get scheduled sessions for students
+exports.getScheduledSessionsForStudent = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const userRole = req.user.role;
+
+        if (userRole !== 'student') {
+            return res.status(403).json({ message: 'Only students can view their scheduled sessions' });
+        }
+
+        // Get all accepted mentorship requests for this student
+        const connections = await MentorshipRequest.find({
+            mentee_id: userId,
+            status: 'accepted'
+        });
+
+        console.log('Found connections:', connections.length);
+        const matchIds = connections.map(conn => conn._id);
+        console.log('Match IDs:', matchIds);
+
+        // Get sessions for these matches
+        const sessions = await MentorshipSession.find({
+            match_id: { $in: matchIds },
+            status: { $in: ['upcoming', 'rescheduled'] }
+        }).sort({ scheduled_time: 1 });
+
+        console.log('Found sessions:', sessions.length);
+        console.log('Sessions:', sessions.map(s => ({ id: s._id, match_id: s.match_id, status: s.status })));
+
+        // Enrich with mentor details using the connections we already have
+        const enrichedSessions = await Promise.all(sessions.map(async (session) => {
+            const connection = connections.find(conn => conn._id.toString() === session.match_id.toString());
+
+            // Handle case where connection might not exist
+            if (!connection) {
+                console.log('No connection found for session:', session._id, 'match_id:', session.match_id);
+                return null; // Skip this session if connection is invalid
+            }
+
+            const alumniProfile = await AlumniProfile.findById(connection.mentor_id);
+
+            if (alumniProfile) {
+                return {
+                    _id: session._id,
+                    mentor: {
+                        _id: alumniProfile._id,
+                        full_name: alumniProfile.full_name,
+                        profile_photo_url: alumniProfile.profile_photo_url,
+                        current_position: alumniProfile.current_position,
+                        company: alumniProfile.company
+                    },
+                    scheduled_date: session.scheduled_time.toISOString().split('T')[0],
+                    scheduled_time: session.scheduled_time.toTimeString().slice(0, 5),
+                    duration: session.duration,
+                    mode: session.mode,
+                    topic: session.topic,
+                    meeting_link: session.meeting_link,
+                    status: session.status
+                };
+            } else {
+                // Use unknown if no profile exists
+                console.log('No alumni profile found for connection:', connection._id, 'mentor_id:', connection.mentor_id);
+                return {
+                    _id: session._id,
+                    mentor: {
+                        _id: connection.mentor_id,
+                        full_name: 'Unknown',
+                        profile_photo_url: '',
+                        current_position: '',
+                        company: ''
+                    },
+                    scheduled_date: session.scheduled_time.toISOString().split('T')[0],
+                    scheduled_time: session.scheduled_time.toTimeString().slice(0, 5),
+                    duration: session.duration,
+                    mode: session.mode,
+                    topic: session.topic,
+                    meeting_link: session.meeting_link,
+                    status: session.status
+                };
+            }
+        }));
+
+        // Filter out null sessions
+        const validSessions = enrichedSessions.filter(session => session !== null);
+        console.log('Valid sessions to return:', validSessions.length);
+
+        res.status(200).json(validSessions);
+    } catch (error) {
+        console.error('Error fetching scheduled sessions for student:', error);
+        res.status(500).json({ message: 'Server error while fetching sessions' });
+    }
+};
+
+// Update a scheduled mentorship session
+exports.updateMentorshipSession = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const userRole = req.user.role;
+        const { sessionId, scheduled_date, scheduled_time, duration, mode, topic, meeting_link } = req.body;
+
+        if (userRole !== 'alumni') {
+            return res.status(403).json({ message: 'Only alumni can update sessions' });
+        }
+
+        // Find the session and verify it belongs to this mentor
+        const session = await MentorshipSession.findById(sessionId);
+
+        if (!session) {
+            return res.status(404).json({ message: 'Session not found' });
+        }
+
+        // Verify the session belongs to this mentor by checking the match_id
+        const connection = await MentorshipRequest.findOne({
+            _id: session.match_id,
+            mentor_id: userId,
+            status: 'accepted'
+        });
+
+        if (!connection) {
+            return res.status(403).json({ message: 'You can only update your own sessions' });
+        }
+
+        // Combine date and time into a single Date object
+        const scheduledDateTime = new Date(`${scheduled_date}T${scheduled_time}`);
+
+        // Update the session
+        session.scheduled_time = scheduledDateTime;
+        session.duration = duration;
+        session.mode = mode;
+        session.topic = topic;
+        session.meeting_link = meeting_link;
+        session.status = 'rescheduled';
+
+        await session.save();
+
+        res.status(200).json({
+            message: 'Mentorship session updated successfully',
+            session
+        });
+    } catch (error) {
+        console.error('Error updating mentorship session:', error);
+        res.status(500).json({ message: 'Server error while updating session' });
+    }
+};
+
+// Cancel a scheduled mentorship session
+exports.cancelMentorshipSession = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const userRole = req.user.role;
+        const { sessionId } = req.body;
+
+        if (userRole !== 'alumni') {
+            return res.status(403).json({ message: 'Only alumni can cancel sessions' });
+        }
+
+        // Find the session and verify it belongs to this mentor
+        const session = await MentorshipSession.findById(sessionId);
+
+        if (!session) {
+            return res.status(404).json({ message: 'Session not found' });
+        }
+
+        // Verify the session belongs to this mentor by checking the match_id
+        const connection = await MentorshipRequest.findOne({
+            _id: session.match_id,
+            mentor_id: userId,
+            status: 'accepted'
+        });
+
+        if (!connection) {
+            return res.status(403).json({ message: 'You can only cancel your own sessions' });
+        }
+
+        // Delete the session
+        await MentorshipSession.findByIdAndDelete(sessionId);
+
+        res.status(200).json({ message: 'Session cancelled successfully' });
+    } catch (error) {
+        console.error('Error cancelling mentorship session:', error);
+        res.status(500).json({ message: 'Server error while cancelling session' });
+    }
+};
+
+// Create or get conversation between mentor and mentee
+exports.createOrGetConversation = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const userRole = req.user.role;
+        const { otherUserId } = req.body;
+
+        // Find the mentorship request to ensure they are connected
+        let mentorshipRequest;
+        if (userRole === 'student') {
+            mentorshipRequest = await MentorshipRequest.findOne({
+                mentee_id: userId,
+                mentor_id: otherUserId,
+                status: 'accepted'
+            });
+        } else if (userRole === 'alumni') {
+            mentorshipRequest = await MentorshipRequest.findOne({
+                mentor_id: userId,
+                mentee_id: otherUserId,
+                status: 'accepted'
+            });
+        }
+
+        if (!mentorshipRequest) {
+            return res.status(403).json({ message: 'You can only message connected mentorship partners' });
+        }
+
+        // Check if conversation already exists
+        let conversation = await Conversation.findOne({
+            mentorship_request_id: mentorshipRequest._id,
+            participants: { $all: [userId, otherUserId] }
+        });
+
+        if (!conversation) {
+            // Create new conversation
+            conversation = new Conversation({
+                participants: [userId, otherUserId],
+                mentorship_request_id: mentorshipRequest._id
+            });
+            await conversation.save();
+        }
+
+        res.status(200).json({ conversation });
+    } catch (error) {
+        console.error('Error creating/getting conversation:', error);
+        res.status(500).json({ message: 'Server error while creating/getting conversation' });
+    }
+};
+
+// Send a message in a conversation
+exports.sendMessage = async (req, res) => {
+    try {
+        const senderId = req.user.id;
+        const { conversationId, messageText } = req.body;
+
+        // Verify the conversation exists and user is a participant
+        const conversation = await Conversation.findOne({
+            _id: conversationId,
+            participants: senderId
+        });
+
+        if (!conversation) {
+            return res.status(404).json({ message: 'Conversation not found or access denied' });
+        }
+
+        // Create the message
+        const message = new Message({
+            conversation_id: conversationId,
+            sender_id: senderId,
+            message_text: messageText
+        });
+
+        await message.save();
+
+        // Update conversation's last_message and updated_at
+        conversation.last_message = message._id;
+        conversation.updated_at = new Date();
+        await conversation.save();
+
+        // Populate sender details for response
+        await message.populate({
+            path: 'sender_id',
+            select: 'full_name profile_photo_url',
+            model: senderId === conversation.participants[0] ? 'StudentProfile' : 'AlumniProfile'
+        });
+
+        res.status(201).json({ message });
+    } catch (error) {
+        console.error('Error sending message:', error);
+        res.status(500).json({ message: 'Server error while sending message' });
+    }
+};
+
+// Get all conversations for the authenticated user
+exports.getConversations = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const conversations = await Conversation.find({
+            participants: userId
+        })
+        .populate({
+            path: 'mentorship_request_id',
+            select: 'mentee_id mentor_id',
+            populate: [
+                {
+                    path: 'mentee_id',
+                    select: 'full_name profile_photo_url current_position company',
+                    model: 'StudentProfile'
+                },
+                {
+                    path: 'mentor_id',
+                    select: 'full_name profile_photo_url current_position company',
+                    model: 'AlumniProfile'
+                }
+            ]
+        })
+        .populate({
+            path: 'last_message',
+            populate: {
+                path: 'sender_id',
+                select: 'full_name'
+            }
+        })
+        .sort({ updated_at: -1 });
+
+        // Enrich conversations with other participant details
+        const enrichedConversations = conversations.map(conversation => {
+            const mentorshipRequest = conversation.mentorship_request_id;
+            const otherParticipant = mentorshipRequest.mentee_id._id.toString() === userId.toString()
+                ? mentorshipRequest.mentor_id
+                : mentorshipRequest.mentee_id;
+
+            return {
+                _id: conversation._id,
+                other_participant: otherParticipant,
+                last_message: conversation.last_message,
+                updated_at: conversation.updated_at
+            };
+        });
+
+        res.status(200).json(enrichedConversations);
+    } catch (error) {
+        console.error('Error fetching conversations:', error);
+        res.status(500).json({ message: 'Server error while fetching conversations' });
+    }
+};
+
+// Get messages for a specific conversation
+exports.getMessages = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { conversationId } = req.params;
+
+        // Verify user is participant in conversation
+        const conversation = await Conversation.findOne({
+            _id: conversationId,
+            participants: userId
+        });
+
+        if (!conversation) {
+            return res.status(404).json({ message: 'Conversation not found or access denied' });
+        }
+
+        const messages = await Message.find({
+            conversation_id: conversationId
+        })
+        .populate({
+            path: 'sender_id',
+            select: 'full_name profile_photo_url',
+            model: conversation.participants[0].toString() === userId.toString() ? 'StudentProfile' : 'AlumniProfile'
+        })
+        .sort({ created_at: 1 });
+
+        // Mark messages as read by this user
+        await Message.updateMany(
+            {
+                conversation_id: conversationId,
+                sender_id: { $ne: userId },
+                'read_by.user_id': { $ne: userId }
+            },
+            {
+                $push: {
+                    read_by: {
+                        user_id: userId,
+                        read_at: new Date()
+                    }
+                }
+            }
+        );
+
+        res.status(200).json(messages);
+    } catch (error) {
+        console.error('Error fetching messages:', error);
+        res.status(500).json({ message: 'Server error while fetching messages' });
+    }
+};
+
+// Upload a mentorship resource (alumni only)
+exports.uploadMentorshipResource = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const userRole = req.user.role;
+        const { title, resource_type, description, tags, file_url } = req.body;
+
+        if (userRole !== 'alumni') {
+            return res.status(403).json({ message: 'Only alumni can upload mentorship resources' });
+        }
+
+        let url;
+        if (resource_type === 'link') {
+            if (!file_url) {
+                return res.status(400).json({ message: 'URL is required for link type' });
+            }
+            url = file_url;
+        } else {
+            if (!req.file) {
+                return res.status(400).json({ message: 'File is required for file type' });
+            }
+            url = req.file.path;
+        }
+
+        const resource = new PrepResource({
+            title,
+            type: resource_type,
+            url,
+            description,
+            difficulty: 'intermediate',
+            tags: tags || [],
+            category: 'mentorship',
+            created_by: userId
+        });
+
+        await resource.save();
+        res.status(201).json({ message: 'Mentorship resource uploaded successfully', resource });
+    } catch (error) {
+        console.error('Error uploading mentorship resource:', error);
+        res.status(500).json({ message: 'Server error while uploading resource' });
+    }
+};
+
+// Get all mentorship resources (for students)
+exports.getMentorshipResources = async (req, res) => {
+    try {
+        const resources = await PrepResource.find({ category: 'mentorship' })
+            .populate({
+                path: 'created_by',
+                select: 'full_name profile_photo_url current_position company',
+                model: 'AlumniProfile'
+            })
+            .sort({ created_at: -1 });
+
+        res.status(200).json(resources);
+    } catch (error) {
+        console.error('Error fetching mentorship resources:', error);
+        res.status(500).json({ message: 'Server error while fetching resources' });
+    }
+};
+
+// Delete a mentorship resource (alumni only - only the creator can delete)
+exports.deleteMentorshipResource = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const userRole = req.user.role;
+        const { resourceId } = req.params;
+
+        if (userRole !== 'alumni') {
+            return res.status(403).json({ message: 'Only alumni can delete mentorship resources' });
+        }
+
+        // Find the resource and verify ownership
+        const resource = await PrepResource.findOne({
+            _id: resourceId,
+            created_by: userId,
+            category: 'mentorship'
+        });
+
+        if (!resource) {
+            return res.status(404).json({ message: 'Resource not found or access denied' });
+        }
+
+        // Delete the resource
+        await PrepResource.findByIdAndDelete(resourceId);
+
+        res.status(200).json({ message: 'Mentorship resource deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting mentorship resource:', error);
+        res.status(500).json({ message: 'Server error while deleting resource' });
     }
 };
