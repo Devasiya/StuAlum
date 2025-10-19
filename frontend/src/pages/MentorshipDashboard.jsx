@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import mentorshipService from '../services/mentorshipService';
 import withSidebarToggle from '../hocs/withSidebarToggle';
 import Navbar from '../components/Navbar';
+import MentorshipResourcesSection from '../components/MentorshipResourcesSection';
 
 // Mock auth utility - replace with your actual auth context
 const getCurrentUser = () => {
@@ -45,6 +46,12 @@ const MentorshipDashboard = ({ onSidebarToggle }) => {
     const [scheduledSessions, setScheduledSessions] = useState([]);
     const [activeTab, setActiveTab] = useState('overview');
 
+    // Student-specific states
+    const [studentSessions, setStudentSessions] = useState([]);
+    const [studentSessionsLoading, setStudentSessionsLoading] = useState(false);
+
+
+
     // Filters state
     const [filters, setFilters] = useState({
         requirements: '',
@@ -65,10 +72,57 @@ const MentorshipDashboard = ({ onSidebarToggle }) => {
     const [showPreferencesModal, setShowPreferencesModal] = useState(false);
     const [selectedMentor, setSelectedMentor] = useState(null);
     const [selectedMentee, setSelectedMentee] = useState(null);
+    const [selectedSession, setSelectedSession] = useState(null); // For updating existing sessions
+
+    const [messageText, setMessageText] = useState('');
+    const [notesText, setNotesText] = useState('');
+
+    // Session form state
+    const [sessionForm, setSessionForm] = useState({
+        scheduled_date: '',
+        scheduled_time: '',
+        duration: 60,
+        mode: 'virtual',
+        topic: '',
+        meeting_link: ''
+    });
+
+    // Populate form when updating an existing session
+    useEffect(() => {
+        if (selectedSession) {
+            setSessionForm({
+                scheduled_date: selectedSession.scheduled_date ? new Date(selectedSession.scheduled_date).toISOString().split('T')[0] : '',
+                scheduled_time: selectedSession.scheduled_time || '',
+                duration: selectedSession.duration || 60,
+                mode: selectedSession.mode || 'virtual',
+                topic: selectedSession.topic || '',
+                meeting_link: selectedSession.meeting_link || ''
+            });
+        }
+    }, [selectedSession]);
 
     // Fetch data on component mount
     useEffect(() => {
         fetchDashboardData();
+    }, []);
+
+    // Fetch student sessions separately
+    useEffect(() => {
+        const fetchStudentSessions = async () => {
+            try {
+                setStudentSessionsLoading(true);
+                const sessions = await mentorshipService.getScheduledSessionsForStudent();
+                setStudentSessions(sessions);
+            } catch (err) {
+                console.error('Error fetching student sessions:', err);
+            } finally {
+                setStudentSessionsLoading(false);
+            }
+        };
+
+        if (user.role === 'student') {
+            fetchStudentSessions();
+        }
     }, []);
 
     const fetchDashboardData = async () => {
@@ -82,7 +136,7 @@ const MentorshipDashboard = ({ onSidebarToggle }) => {
                     mentorshipService.getOutgoingRequests()
                 ]);
 
-                setConnections(connectionsRes.filter(conn => conn.relationship === 'mentor'));
+                setConnections(connectionsRes);
                 setOutgoingRequests(outgoingRes);
             } else if (user.role === 'alumni') {
                 // Alumni data
@@ -95,7 +149,7 @@ const MentorshipDashboard = ({ onSidebarToggle }) => {
                 ]);
 
                 setMentorshipRequests(requestsRes);
-                setConnections(connectionsRes.filter(conn => conn.relationship === 'mentee'));
+                setConnections(connectionsRes);
                 setMentorshipHistory(historyRes);
                 setMentorshipPreferences(preferencesRes);
                 setScheduledSessions(sessionsRes);
@@ -134,7 +188,7 @@ const MentorshipDashboard = ({ onSidebarToggle }) => {
             fetchDashboardData(); // Refresh data
         } catch (err) {
             console.error('Error sending request:', err);
-            alert('Failed to send mentorship request');
+            alert(err.response?.data?.message || 'Failed to send mentorship request');
         }
     };
 
@@ -175,13 +229,34 @@ const MentorshipDashboard = ({ onSidebarToggle }) => {
 
     const handleScheduleSession = async (sessionData) => {
         try {
-            await mentorshipService.scheduleMentorshipSession(sessionData);
-            alert('Session scheduled successfully!');
+            if (selectedSession) {
+                // Update existing session
+                await mentorshipService.updateMentorshipSession(sessionData);
+                alert('Session updated successfully!');
+            } else {
+                // Schedule new session
+                await mentorshipService.scheduleMentorshipSession(sessionData);
+                alert('Session scheduled successfully!');
+            }
             setShowScheduleModal(false);
+            setSelectedSession(null);
             fetchDashboardData(); // Refresh data
         } catch (err) {
             console.error('Error scheduling session:', err);
             alert('Failed to schedule session');
+        }
+    };
+
+    const handleCompleteMentorship = async (requestId) => {
+        try {
+            if (window.confirm('Are you sure you want to complete this mentorship? This action cannot be undone.')) {
+                await mentorshipService.completeMentorship(requestId);
+                alert('Mentorship completed successfully!');
+                fetchDashboardData(); // Refresh data
+            }
+        } catch (err) {
+            console.error('Error completing mentorship:', err);
+            alert('Failed to complete mentorship');
         }
     };
 
@@ -414,7 +489,7 @@ const MentorshipDashboard = ({ onSidebarToggle }) => {
                                                         <div>
                                                             <h3 className="font-semibold text-white">{connection.mentor_id?.full_name}</h3>
                                                             <p className="text-sm text-gray-300">{connection.mentor_id?.current_position} at {connection.mentor_id?.company}</p>
-                                                            <p className="text-xs text-gray-400">Next session: Tomorrow at 2:00 PM</p>
+                                                            <p className="text-xs text-gray-400">Connected since {connection.created_at ? new Date(connection.created_at).toLocaleDateString() : 'Unknown'}</p>
                                                         </div>
                                                     </div>
                                                     <div className="flex gap-2">
@@ -424,12 +499,6 @@ const MentorshipDashboard = ({ onSidebarToggle }) => {
                                                         >
                                                             Reschedule
                                                         </button>
-                                                        <button
-                                                            onClick={() => setShowNotesModal(true)}
-                                                            className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm hover:scale-105 transition-all duration-200"
-                                                        >
-                                                            Notes
-                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -438,43 +507,57 @@ const MentorshipDashboard = ({ onSidebarToggle }) => {
                                 )}
                             </div>
 
-                            {/* Section 4: Requests & Invitations */}
+
+
+                            {/* Section 5: Scheduled Sessions */}
                             <div className="bg-gradient-to-br from-[#23232b] to-[#1a1a23] rounded-lg shadow-md p-6 border border-[#3a3a45] relative overflow-hidden">
-                                <div className="absolute top-0 left-0 w-20 h-20 bg-purple-600/5 rounded-full blur-2xl"></div>
-                                <h2 className="text-2xl font-semibold mb-4 text-white relative z-10">Requests & Invitations</h2>
-                                {outgoingRequests.length === 0 ? (
-                                    <p className="text-gray-300 relative z-10">No pending requests.</p>
+                                <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-600/5 rounded-full blur-2xl"></div>
+                                <h2 className="text-2xl font-semibold mb-4 text-white relative z-10">My Sessions</h2>
+                                {studentSessionsLoading ? (
+                                    <div className="text-gray-300 relative z-10">Loading sessions...</div>
+                                ) : studentSessions.length === 0 ? (
+                                    <p className="text-gray-300 relative z-10">No scheduled sessions yet.</p>
                                 ) : (
                                     <div className="space-y-4 relative z-10">
-                                        {outgoingRequests.map((request) => (
-                                            <div key={request._id} className="border border-[#3a3a45] rounded-lg p-4 bg-gradient-to-br from-[#1a1a23] to-[#15151a] hover:border-purple-500/50 transition-all duration-200">
+                                        {studentSessions.map((session) => (
+                                            <div key={session._id} className="border border-[#3a3a45] rounded-lg p-4 bg-gradient-to-br from-[#1a1a23] to-[#15151a] hover:border-purple-500/50 transition-all duration-200">
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center">
                                                         <img
-                                                            src={request.mentor_id?.profile_photo_url || '/default-avatar.png'}
-                                                            alt={request.mentor_id?.full_name}
+                                                            src={session.mentor?.profile_photo_url || '/default-avatar.png'}
+                                                            alt={session.mentor?.full_name}
                                                             className="w-12 h-12 rounded-full mr-3"
                                                         />
                                                         <div>
-                                                            <h3 className="font-semibold text-white">{request.mentor_id?.full_name}</h3>
-                                                            <p className="text-sm text-gray-300">{request.mentor_id?.current_position} at {request.mentor_id?.company}</p>
-                                                            <p className="text-xs text-gray-400">Status: Waiting for response</p>
+                                                            <h3 className="font-semibold text-white">{session.mentor?.full_name}</h3>
+                                                            <p className="text-sm text-gray-300">
+                                                                {new Date(session.scheduled_date).toLocaleDateString()} at {session.scheduled_time}
+                                                            </p>
+                                                            <p className="text-xs text-gray-400">{session.topic || 'General mentorship session'}</p>
                                                         </div>
                                                     </div>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => setShowMessageModal(true)}
-                                                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm hover:scale-105 transition-all duration-200"
-                                                        >
-                                                            Message
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleCancelRequest(request._id)}
-                                                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm hover:scale-105 transition-all duration-200"
-                                                        >
-                                                            Cancel
-                                                        </button>
-                                                    </div>
+                                                        <div className="flex gap-2">
+                                                            {session.meeting_link && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        if (session.meeting_link) {
+                                                                            window.open(session.meeting_link, '_blank');
+                                                                        } else {
+                                                                            alert('Meeting link not available for this session.');
+                                                                        }
+                                                                    }}
+                                                                    className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm hover:scale-105 transition-all duration-200"
+                                                                >
+                                                                    Join Session
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                onClick={() => setShowMessageModal(true)}
+                                                                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm hover:scale-105 transition-all duration-200"
+                                                            >
+                                                                Message
+                                                            </button>
+                                                        </div>
                                                 </div>
                                             </div>
                                         ))}
@@ -482,34 +565,8 @@ const MentorshipDashboard = ({ onSidebarToggle }) => {
                                 )}
                             </div>
 
-                            {/* Section 5: Mentorship Resources */}
-                            <div className="bg-gradient-to-br from-[#23232b] to-[#1a1a23] rounded-lg shadow-md p-6 border border-[#3a3a45] relative overflow-hidden">
-                                <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-600/5 rounded-full blur-2xl"></div>
-                                <h2 className="text-2xl font-semibold mb-4 text-white relative z-10">Mentorship Resources</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
-                                    <div className="border border-[#3a3a45] rounded-lg p-4 text-center bg-gradient-to-br from-[#1a1a23] to-[#15151a] hover:border-purple-500/50 transition-all duration-200">
-                                        <h3 className="font-semibold mb-2 text-white">Session Agenda</h3>
-                                        <p className="text-sm text-gray-300 mb-3">Structured templates for productive mentorship sessions</p>
-                                        <button className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-2 rounded hover:from-purple-700 hover:to-purple-800 hover:scale-105 transition-all duration-200">
-                                            Download
-                                        </button>
-                                    </div>
-                                    <div className="border border-[#3a3a45] rounded-lg p-4 text-center bg-gradient-to-br from-[#1a1a23] to-[#15151a] hover:border-purple-500/50 transition-all duration-200">
-                                        <h3 className="font-semibold mb-2 text-white">SMART Goals</h3>
-                                        <p className="text-sm text-gray-300 mb-3">Learn to set Specific, Measurable, Achievable goals</p>
-                                        <button className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-2 rounded hover:from-purple-700 hover:to-purple-800 hover:scale-105 transition-all duration-200">
-                                            Learn More
-                                        </button>
-                                    </div>
-                                    <div className="border border-[#3a3a45] rounded-lg p-4 text-center bg-gradient-to-br from-[#1a1a23] to-[#15151a] hover:border-purple-500/50 transition-all duration-200">
-                                        <h3 className="font-semibold mb-2 text-white">FAQ</h3>
-                                        <p className="text-sm text-gray-300 mb-3">Common questions about the mentorship program</p>
-                                        <button className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-2 rounded hover:from-purple-700 hover:to-purple-800 hover:scale-105 transition-all duration-200">
-                                            View FAQ
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                            {/* Section 6: Mentorship Resources */}
+                            <MentorshipResourcesSection user={user} />
                         </>
                     ) : (
                         // ALUMNI VIEW
@@ -518,11 +575,12 @@ const MentorshipDashboard = ({ onSidebarToggle }) => {
                             <div className="bg-gradient-to-br from-[#23232b] to-[#1a1a23] rounded-lg shadow-md p-4 border border-[#3a3a45] mb-6">
                                 <div className="flex space-x-4">
                                     {[
-                                        { id: 'overview', label: 'Overview', count: mentorshipRequests.length },
+                                        { id: 'overview', label: 'Overview' },
                                         { id: 'requests', label: 'Requests', count: mentorshipRequests.length },
                                         { id: 'mentees', label: 'My Mentees', count: connections.length },
                                         { id: 'history', label: 'History', count: mentorshipHistory.length },
                                         { id: 'sessions', label: 'Sessions', count: scheduledSessions.length },
+                                        { id: 'resources', label: 'Resources' },
                                         { id: 'settings', label: 'Settings' }
                                     ].map(tab => (
                                         <button
@@ -664,25 +722,25 @@ const MentorshipDashboard = ({ onSidebarToggle }) => {
                                         <p className="text-gray-300">No active mentees yet.</p>
                                     ) : (
                                         <div className="space-y-4">
-                                            {connections.map((mentee) => (
-                                                <div key={mentee._id} className="border border-[#3a3a45] rounded-lg p-4">
+                                            {connections.map((connection) => (
+                                                <div key={connection._id} className="border border-[#3a3a45] rounded-lg p-4">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center">
                                                             <img
-                                                                src={mentee.profile_photo_url || '/default-avatar.png'}
-                                                                alt={mentee.full_name}
+                                                                src={connection.mentee_id?.profile_photo_url || '/default-avatar.png'}
+                                                                alt={connection.mentee_id?.full_name}
                                                                 className="w-12 h-12 rounded-full mr-3"
                                                             />
                                                             <div>
-                                                                <h3 className="font-semibold text-white">{mentee.full_name}</h3>
-                                                                <p className="text-sm text-gray-300">{mentee.current_position} at {mentee.company}</p>
-                                                                <p className="text-xs text-gray-400">Connected since {new Date(mentee.connected_at).toLocaleDateString()}</p>
+                                                                <h3 className="font-semibold text-white">{connection.mentee_id?.full_name}</h3>
+                                                                <p className="text-sm text-gray-300">{connection.mentee_id?.current_position} at {connection.mentee_id?.company}</p>
+                                                                <p className="text-xs text-gray-400">Connected since {connection.created_at ? new Date(connection.created_at).toLocaleDateString() : 'Unknown'}</p>
                                                             </div>
                                                         </div>
                                                         <div className="flex gap-2">
                                                             <button
                                                                 onClick={() => {
-                                                                    setSelectedMentee(mentee);
+                                                                    setSelectedMentee(connection.mentee_id);
                                                                     setShowMessageModal(true);
                                                                 }}
                                                                 className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
@@ -691,12 +749,18 @@ const MentorshipDashboard = ({ onSidebarToggle }) => {
                                                             </button>
                                                             <button
                                                                 onClick={() => {
-                                                                    setSelectedMentee(mentee);
+                                                                    setSelectedMentee(connection.mentee_id);
                                                                     setShowScheduleModal(true);
                                                                 }}
                                                                 className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm"
                                                             >
                                                                 Schedule Session
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleCompleteMentorship(connection._id)}
+                                                                className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-sm"
+                                                            >
+                                                                Complete Mentorship
                                                             </button>
                                                         </div>
                                                     </div>
@@ -745,11 +809,11 @@ const MentorshipDashboard = ({ onSidebarToggle }) => {
                             {activeTab === 'sessions' && (
                                 <div className="bg-gradient-to-br from-[#23232b] to-[#1a1a23] rounded-lg shadow-md p-6 border border-[#3a3a45]">
                                     <h2 className="text-2xl font-semibold mb-4 text-white">Scheduled Sessions</h2>
-                                    {scheduledSessions.length === 0 ? (
+                                    {scheduledSessions.filter(session => session && session.mentee).length === 0 ? (
                                         <p className="text-gray-300">No scheduled sessions.</p>
                                     ) : (
                                         <div className="space-y-4">
-                                            {scheduledSessions.map((session) => (
+                                            {scheduledSessions.filter(session => session && session.mentee).map((session) => (
                                                 <div key={session._id} className="border border-[#3a3a45] rounded-lg p-4">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center">
@@ -767,24 +831,46 @@ const MentorshipDashboard = ({ onSidebarToggle }) => {
                                                             </div>
                                                         </div>
                                                         <div className="flex gap-2">
+                                                            {session.meeting_link && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        if (session.meeting_link) {
+                                                                            window.open(session.meeting_link, '_blank');
+                                                                        } else {
+                                                                            alert('Meeting link not available for this session.');
+                                                                        }
+                                                                    }}
+                                                                    className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm hover:scale-105 transition-all duration-200"
+                                                                >
+                                                                    Join Session
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 onClick={() => {
                                                                     // Handle reschedule
                                                                     setSelectedMentee(session.mentee);
+                                                                    setSelectedSession(session);
                                                                     setShowScheduleModal(true);
                                                                 }}
-                                                                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+                                                                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm hover:scale-105 transition-all duration-200"
                                                             >
                                                                 Reschedule
                                                             </button>
                                                             <button
-                                                                onClick={() => {
+                                                                onClick={async () => {
                                                                     // Handle cancel session
                                                                     if (window.confirm('Are you sure you want to cancel this session?')) {
-                                                                        // Call cancel session API
+                                                                        try {
+                                                                            await mentorshipService.cancelMentorshipSession(session._id);
+                                                                            alert('Session cancelled successfully!');
+                                                                            fetchDashboardData(); // Refresh data
+                                                                        } catch (err) {
+                                                                            console.error('Error cancelling session:', err);
+                                                                            alert('Failed to cancel session');
+                                                                        }
                                                                     }
                                                                 }}
-                                                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+                                                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm hover:scale-105 transition-all duration-200"
                                                             >
                                                                 Cancel
                                                             </button>
@@ -795,6 +881,11 @@ const MentorshipDashboard = ({ onSidebarToggle }) => {
                                         </div>
                                     )}
                                 </div>
+                            )}
+
+                            {/* Resources Tab */}
+                            {activeTab === 'resources' && (
+                                <MentorshipResourcesSection user={user} />
                             )}
 
                             {/* Settings Tab */}
@@ -889,20 +980,123 @@ const MentorshipDashboard = ({ onSidebarToggle }) => {
                 </div>
             </div>
 
-            {/* Modals - These would need to be implemented as separate components */}
+            {/* Schedule Session Modal */}
             {showScheduleModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-[#23232b] rounded-lg p-6 max-w-md w-full mx-4">
-                        <h3 className="text-xl font-semibold text-white mb-4">Schedule Session</h3>
-                        <p className="text-gray-300 mb-4">Modal implementation needed</p>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setShowScheduleModal(false)}
-                                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded"
-                            >
-                                Cancel
-                            </button>
-                        </div>
+                    <div className="bg-[#23232b] rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+                        <h3 className="text-xl font-semibold text-white mb-6">Schedule Mentorship Session</h3>
+
+                        <form onSubmit={(e) => {
+                            e.preventDefault();
+                            const sessionData = {
+                                ...sessionForm,
+                                mentee_id: selectedMentee?._id,
+                                mentor_id: user.id,
+                                ...(selectedSession && { sessionId: selectedSession._id })
+                            };
+                            handleScheduleSession(sessionData);
+                        }} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">Date</label>
+                                <input
+                                    type="date"
+                                    value={sessionForm.scheduled_date}
+                                    onChange={(e) => setSessionForm({...sessionForm, scheduled_date: e.target.value})}
+                                    className="w-full border border-[#3a3a45] rounded-lg px-3 py-2 bg-[#1a1a23] text-white focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-500"
+                                    required
+                                    min={new Date().toISOString().split('T')[0]}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">Time</label>
+                                <input
+                                    type="time"
+                                    value={sessionForm.scheduled_time}
+                                    onChange={(e) => setSessionForm({...sessionForm, scheduled_time: e.target.value})}
+                                    className="w-full border border-[#3a3a45] rounded-lg px-3 py-2 bg-[#1a1a23] text-white focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-500"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">Duration (minutes)</label>
+                                <select
+                                    value={sessionForm.duration}
+                                    onChange={(e) => setSessionForm({...sessionForm, duration: parseInt(e.target.value)})}
+                                    className="w-full border border-[#3a3a45] rounded-lg px-3 py-2 bg-[#1a1a23] text-white focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-500"
+                                >
+                                    <option value={30}>30 minutes</option>
+                                    <option value={45}>45 minutes</option>
+                                    <option value={60}>60 minutes</option>
+                                    <option value={90}>90 minutes</option>
+                                    <option value={120}>120 minutes</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">Mode</label>
+                                <select
+                                    value={sessionForm.mode}
+                                    onChange={(e) => setSessionForm({...sessionForm, mode: e.target.value})}
+                                    className="w-full border border-[#3a3a45] rounded-lg px-3 py-2 bg-[#1a1a23] text-white focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-500"
+                                >
+                                    <option value="virtual">Virtual</option>
+                                    <option value="in_person">In Person</option>
+                                    <option value="hybrid">Hybrid</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">Topic</label>
+                                <input
+                                    type="text"
+                                    value={sessionForm.topic}
+                                    onChange={(e) => setSessionForm({...sessionForm, topic: e.target.value})}
+                                    placeholder="e.g., Career guidance, Technical skills, Leadership"
+                                    className="w-full border border-[#3a3a45] rounded-lg px-3 py-2 bg-[#1a1a23] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-500"
+                                />
+                            </div>
+
+                            {sessionForm.mode === 'virtual' && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">Meeting Link</label>
+                                    <input
+                                        type="url"
+                                        value={sessionForm.meeting_link}
+                                        onChange={(e) => setSessionForm({...sessionForm, meeting_link: e.target.value})}
+                                        placeholder="https://zoom.us/..."
+                                        className="w-full border border-[#3a3a45] rounded-lg px-3 py-2 bg-[#1a1a23] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-500"
+                                    />
+                                </div>
+                            )}
+
+                            <div className="flex gap-3 pt-4">
+                                <button
+                                    type="submit"
+                                    className="flex-1 bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200"
+                                >
+                                    Schedule Session
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowScheduleModal(false);
+                                        setSessionForm({
+                                            scheduled_date: '',
+                                            scheduled_time: '',
+                                            duration: 60,
+                                            mode: 'virtual',
+                                            topic: '',
+                                            meeting_link: ''
+                                        });
+                                    }}
+                                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-all duration-200"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
@@ -911,10 +1105,42 @@ const MentorshipDashboard = ({ onSidebarToggle }) => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-[#23232b] rounded-lg p-6 max-w-md w-full mx-4">
                         <h3 className="text-xl font-semibold text-white mb-4">Send Message</h3>
-                        <p className="text-gray-300 mb-4">Modal implementation needed</p>
+                        <textarea
+                            value={messageText}
+                            onChange={(e) => setMessageText(e.target.value)}
+                            placeholder="Type your message here..."
+                            className="w-full border border-[#3a3a45] rounded-lg px-3 py-2 bg-[#1a1a23] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-500 mb-4"
+                            rows="4"
+                        />
                         <div className="flex gap-2">
                             <button
-                                onClick={() => setShowMessageModal(false)}
+                                onClick={async () => {
+                                    if (!messageText.trim()) {
+                                        alert('Please enter a message');
+                                        return;
+                                    }
+                                    try {
+                                        // First, create or get conversation
+                                        const conversation = await mentorshipService.createOrGetConversation(selectedMentee?._id);
+                                        // Then send the message
+                                        await mentorshipService.sendMessage(conversation._id, messageText.trim());
+                                        alert('Message sent successfully!');
+                                        setMessageText('');
+                                        setShowMessageModal(false);
+                                    } catch (err) {
+                                        console.error('Error sending message:', err);
+                                        alert('Failed to send message');
+                                    }
+                                }}
+                                className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-2 rounded hover:from-purple-700 hover:to-purple-800"
+                            >
+                                Send
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowMessageModal(false);
+                                    setMessageText('');
+                                }}
                                 className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded"
                             >
                                 Cancel
