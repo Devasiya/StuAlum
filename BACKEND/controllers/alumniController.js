@@ -1,5 +1,3 @@
- // BACKEND/controllers/alumniController.js
-
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
@@ -7,158 +5,184 @@ const { MailerSend, EmailParams, Sender, Recipient } = require('mailersend');
 const AlumniProfile = require('../models/AlumniProfile');
 const AdminProfile = require('../models/AdminProfile');
 
-// --- Existing Functions (registerAlumni, loginAlumni) ---
-// (Content omitted for brevity, assumed to be correct)
-
 exports.registerAlumni = async (req, res) => {
-    try {
-        const data = req.body;
-        // ... (file handling and array normalization logic)
-        ['skills', 'contribution_preferences', 'preferred_communication'].forEach(field => {
-            if (data[field]) {
-                if (typeof data[field] === 'string') {
-                    try {
-                        data[field] = JSON.parse(data[field]);
-                    } catch {
-                        data[field] = data[field].split(',').map(s => s.trim());
-                    }
-                }
-            } else {
-                data[field] = [];
-            }
-        });
-        
-        if (data.graduation_year) data.graduation_year = Number(data.graduation_year);
-        if (data.yearsOfExperience) data.years_of_experience = Number(data.yearsOfExperience); 
+  try {
+    const data = req.body;
 
-        if (data.password) {
-            data.password = await bcrypt.hash(data.password, 10);
-        } else {
-            return res.status(400).json({ error: "Password is required" });
-        }
-
-        const existingAlumni = await AlumniProfile.findOne({ email: data.email });
-        if (existingAlumni) {
-            return res.status(409).json({ error: "Email already registered" });
-        }
-
-        const newAlumni = new AlumniProfile({
-            // ... (AlumniProfile object creation)
-            full_name: data.full_name, email: data.email, password: data.password, 
-            contact_number: data.contact_number, linkedin_url: data.linkedin_url,
-            github_url: data.github_url, leetcode_url: data.leetcode_url,
-            college_id: data.college_id, graduation_year: data.graduation_year,
-            verificationFile: data.verificationFile, degree: data.degree,
-            current_position: data.current_position, company: data.company,
-            industry: data.industry, location: data.location, years_of_experience: data.years_of_experience,
-            skills: data.skills, professional_achievements: data.professional_achievements,
-            contribution_preferences: data.contribution_preferences, preferred_communication: data.preferred_communication,
-            about_me: data.about_me, profile_photo_url: data.profile_photo_url,
-            is_verified: false, engagement_status: data.engagement_status || 'inactive',
-            prospect_type: data.prospect_type,
-        });
-
-        await newAlumni.save();
-        res.status(201).json({ message: 'Alumni registered successfully' });
-    } catch (error) {
-        console.error('Error registering alumni:', error);
-        res.status(500).json({ error: error.message || 'Server error' });
+    // Handle uploaded files
+    if (req.files['verificationFile'] && req.files['verificationFile'].length > 0) {
+      data.verificationFile = '/uploads/' + req.files['verificationFile'][0].filename;
     }
+    if (req.files['profile_photo_url'] && req.files['profile_photo_url'].length > 0) {
+      data.profile_photo_url = '/uploads/' + req.files['profile_photo_url'][0].filename;
+    }
+
+    // Normalize string fields that should be arrays
+    ['skills', 'contribution_preferences', 'communication'].forEach(field => {
+      if (data[field]) {
+        if (typeof data[field] === 'string') {
+          try {
+            data[field] = JSON.parse(data[field]);
+          } catch {
+            data[field] = data[field].split(',').map(s => s.trim());
+          }
+        }
+      } else {
+        data[field] = [];
+      }
+    });
+
+    if (!data.user_id) {
+      data.user_id = new mongoose.Types.ObjectId();
+    }
+
+    if (data.graduation_year) data.graduation_year = Number(data.graduation_year);
+    if (data.yearsOfExperience) data.yearsOfExperience = Number(data.yearsOfExperience);
+
+    if (data.password) {
+      data.password = await bcrypt.hash(data.password, 10);
+    } else {
+      return res.status(400).json({ error: "Password is required" });
+    }
+
+    const existingAlumni = await AlumniProfile.findOne({ email: data.email });
+    if (existingAlumni) {
+      return res.status(409).json({ error: "Email already registered" });
+    }
+
+    const newAlumni = new AlumniProfile({
+      full_name: data.full_name,
+      email: data.email,
+      password: data.password,
+      contact_number: data.contact_number,
+      linkedin_url: data.linkedin_url,
+      github_url: data.github_url,
+      leetcode_url: data.leetcode_url,
+      college_id: data.college_id,
+      graduation_year: data.graduation_year,
+      verificationFile: data.verificationFile,
+      degree: data.degree,
+      current_position: data.current_position,
+      company: data.company,
+      industry: data.industry,
+      location: data.location,
+      years_of_experience: data.yearsOfExperience,
+      skills: data.skills,
+      professional_achievements: data.professional_achievements,
+      contribution_preferences: data.contribution_preferences,
+      preferred_communication: data.communication,
+      about_me: data.about_me,
+      profile_photo_url: data.profile_photo_url,
+      twitter: data.twitter,
+      portfolio: data.portfolio,
+      is_verified: false,
+      engagement_status: data.engagement_status || 'inactive',
+      prospect_type: data.prospect_type,
+      user_id: data.user_id,
+    });
+
+    await newAlumni.save();
+    res.status(201).json({ message: 'Alumni registered successfully' });
+  } catch (error) {
+    console.error('Error registering alumni:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
 };
 
 exports.loginAlumni = async (req, res) => {
-    // ... (login logic)
-    const { email, password } = req.body;
-    try {
-        const user = await AlumniProfile.findOne({ email });
-        if (!user) return res.status(404).json({ message: 'User not found' });
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
-        const token = jwt.sign({ id: user._id , role: 'alumni' }, process.env.JWT_SECRET || 'your_jwt_secret', {
-            expiresIn: '1h',
-        });
-        res.json({
-            token,
-            user: { id: user._id, full_name: user.full_name, email: user.email },
-        });
-    } catch (error) {
-        console.error('Alumni login error:', error);
-        res.status(500).json({ message: 'Server error' });
-    }
+  console.log('Alumni login route hit');
+  const { email, password } = req.body;
+
+  try {
+    const user = await AlumniProfile.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
+
+    const token = jwt.sign({ id: user._id , role: 'alumni' }, process.env.JWT_SECRET || 'your_jwt_secret', {
+      expiresIn: '7d',
+    });
+
+    res.json({
+      token,
+      user: { id: user._id, full_name: user.full_name, email: user.email },
+    });
+  } catch (error) {
+    console.error('Alumni login error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
 
 // --- Alumni Directory Listing ---
 
-// (getAlumniDirectory function content is omitted for brevity, assuming it's structurally correct now)
 exports.getAlumniDirectory = async (req, res) => {
-    // ... (content remains the same, no changes needed here for the current problem)
-    try {
-        const { nameOrKeyword, gradYear, company, industry, remoteFriendly, hiring, mentorReady, limit = 20, skip = 0 } = req.query;
-        const numLimit = Number(limit);
-        const numSkip = Number(skip);
-        const filters = {};
-        if (nameOrKeyword) {
-            const searchRegex = new RegExp(nameOrKeyword, 'i');
-            filters.$or = [
-                { full_name: searchRegex }, { company: searchRegex },
-                { industry: searchRegex }, { skills: { $elemMatch: { $regex: searchRegex } } },
-            ];
-        }
-        if (gradYear) filters.graduation_year = Number(gradYear);
-        if (company) filters.company = new RegExp(company, 'i');
-        if (industry) filters.industry = new RegExp(company, 'i');
-        if (remoteFriendly === 'true') filters.is_remote_friendly = true;
-        if (hiring === 'true') filters.is_hiring = true;
-        if (mentorReady === 'true') filters.is_mentor_ready = true;
-
-        let alumniList;
-        let totalCount;
-        
-        if (Object.keys(filters).length === 0) {
-            totalCount = await AlumniProfile.countDocuments({});
-            alumniList = await AlumniProfile.aggregate([
-                { $match: { } }, { $sample: { size: numLimit } },
-                { $project: { full_name: 1, current_position: 1, company: 1, location: 1, profile_photo_url: 1, skills: 1, graduation_year: 1, contribution_preferences: 1 } }
-            ]);
-        } else {
-            totalCount = await AlumniProfile.countDocuments(filters);
-            alumniList = await AlumniProfile.find(filters)
-                .select('full_name current_position company location profile_photo_url skills graduation_year contribution_preferences user_id')
-                .limit(numLimit)
-                .skip(numSkip)
-                .lean();
-        }
-
-        const formattedAlumni = alumniList.map(alumnus => ({
-            id: alumnus._id, user_id: alumnus._id, name: alumnus.full_name, title: alumnus.current_position,
-            company: alumnus.company, location: alumnus.location,
-            profileImage: alumnus.profile_photo_url || '/path/to/default/image.png',
-            tags: [...(alumnus.skills || []).slice(0, 3), ...(alumnus.contribution_preferences || []).slice(0, 2)].slice(0, 5),
-            gradYear: alumnus.graduation_year,
-        }));
-
-        res.status(200).json({ alumni: formattedAlumni, total: totalCount });
-
-    } catch (error) {
-        console.error('Error fetching alumni directory:', error);
-        res.status(500).json({ message: 'Error fetching alumni directory', error: error.message });
+  try {
+    const { nameOrKeyword, gradYear, company, industry, remoteFriendly, hiring, mentorReady, limit = 20, skip = 0 } = req.query;
+    const numLimit = Number(limit);
+    const numSkip = Number(skip);
+    const filters = {};
+    if (nameOrKeyword) {
+      const searchRegex = new RegExp(nameOrKeyword, 'i');
+      filters.$or = [
+        { full_name: searchRegex }, { company: searchRegex },
+        { industry: searchRegex }, { skills: { $elemMatch: { $regex: searchRegex } } },
+      ];
     }
+    if (gradYear) filters.graduation_year = Number(gradYear);
+    if (company) filters.company = new RegExp(company, 'i');
+    if (industry) filters.industry = new RegExp(industry, 'i');
+    if (remoteFriendly === 'true') filters.is_remote_friendly = true;
+    if (hiring === 'true') filters.is_hiring = true;
+    if (mentorReady === 'true') filters.is_mentor_ready = true;
+
+    let alumniList;
+    let totalCount;
+
+    if (Object.keys(filters).length === 0) {
+      totalCount = await AlumniProfile.countDocuments({});
+      alumniList = await AlumniProfile.aggregate([
+        { $match: {} }, { $sample: { size: numLimit } },
+        { $project: { full_name: 1, current_position: 1, company: 1, location: 1, profile_photo_url: 1, skills: 1, graduation_year: 1, contribution_preferences: 1 } }
+      ]);
+    } else {
+      totalCount = await AlumniProfile.countDocuments(filters);
+      alumniList = await AlumniProfile.find(filters)
+        .select('full_name current_position company location profile_photo_url skills graduation_year contribution_preferences user_id')
+        .limit(numLimit)
+        .skip(numSkip)
+        .lean();
+    }
+
+    const formattedAlumni = alumniList.map(alumnus => ({
+      id: alumnus._id, user_id: alumnus._id, name: alumnus.full_name, title: alumnus.current_position,
+      company: alumnus.company, location: alumnus.location,
+      profileImage: alumnus.profile_photo_url || '/path/to/default/image.png',
+      tags: [...(alumnus.skills || []).slice(0, 3), ...(alumnus.contribution_preferences || []).slice(0, 2)].slice(0, 5),
+      gradYear: alumnus.graduation_year,
+    }));
+
+    res.status(200).json({ alumni: formattedAlumni, total: totalCount });
+
+  } catch (error) {
+    console.error('Error fetching alumni directory:', error);
+    res.status(500).json({ message: 'Error fetching alumni directory', error: error.message });
+  }
 };
 
 // --- Alumni Profile By ID ---
 exports.getAlumniProfileById = async (req, res) => {
-    // ... (content remains the same, no changes needed)
-    try {
-        const { id } = req.params;
-        const alumni = await AlumniProfile.findById(id).select('-password');
-        if (!alumni) return res.status(404).json({ message: 'Alumni profile not found' });
-        const profile = alumni.toObject();
-        res.status(200).json(profile);
-    } catch (error) {
-        if (error.kind === 'ObjectId') return res.status(400).json({ message: 'Invalid profile ID format' });
-        console.error('Error fetching alumni profile by ID:', error);
-        res.status(500).json({ message: 'Server error while fetching profile' });
-    }
+  try {
+    const { id } = req.params;
+    const alumni = await AlumniProfile.findById(id).select('-password');
+    if (!alumni) return res.status(404).json({ message: 'Alumni profile not found' });
+    const profile = alumni.toObject();
+    res.status(200).json(profile);
+  } catch (error) {
+    if (error.kind === 'ObjectId') return res.status(400).json({ message: 'Invalid profile ID format' });
+    console.error('Error fetching alumni profile by ID:', error);
+    res.status(500).json({ message: 'Server error while fetching profile' });
+  }
 };
 
 // ------------------------------------------------------------------
@@ -166,125 +190,124 @@ exports.getAlumniProfileById = async (req, res) => {
 // ------------------------------------------------------------------
 
 exports.inviteAlumni = async (req, res) => {
-    const { emails } = req.body;
+  const { emails } = req.body;
 
-    if (!emails || !Array.isArray(emails) || emails.length === 0) {
-        return res.status(400).json({ message: 'A list of emails is required.' });
+  if (!emails || !Array.isArray(emails) || emails.length === 0) {
+    return res.status(400).json({ message: 'A list of emails is required.' });
+  }
+
+  try {
+    // Fetch the logged-in admin's details
+    const admin = await AdminProfile.findById(req.user.id).select('full_name email');
+    if (!admin) {
+      return res.status(404).json({ message: 'Admin not found.' });
     }
 
-    try {
-        // Fetch the logged-in admin's details
-        const admin = await AdminProfile.findById(req.user.id).select('full_name email');
-        if (!admin) {
-            return res.status(404).json({ message: 'Admin not found.' });
-        }
+    // Initialize MailerSend
+    const mailersend = new MailerSend({
+      apiKey: process.env.MAILERSEND_API_KEY,
+    });
 
-        // Initialize MailerSend
-        const mailersend = new MailerSend({
-            apiKey: process.env.MAILERSEND_API_KEY,
-        });
+    // 🛑 NOTE: Filter out existing users before sending (optional but good practice)
+    const existingAlumni = await AlumniProfile.find({ email: { $in: emails } }).select('email');
+    const existingEmails = new Set(existingAlumni.map(a => a.email));
+    const newEmails = emails.filter(email => !existingEmails.has(email));
 
-        // 🛑 NOTE: Filter out existing users before sending (optional but good practice)
-        const existingAlumni = await AlumniProfile.find({ email: { $in: emails } }).select('email');
-        const existingEmails = new Set(existingAlumni.map(a => a.email));
-        const newEmails = emails.filter(email => !existingEmails.has(email));
-
-        if (newEmails.length === 0) {
-            return res.status(200).json({ message: 'All provided emails are already registered.' });
-        }
-
-        // For MailerSend trial account, you can only send to verified emails
-        // For now, we'll send to the admin's email as a test, or you need to verify recipient domains
-        const verifiedRecipients = newEmails.filter(email =>
-            email.includes('@gmail.com') || email.includes('@yahoo.com') ||
-            email === admin.email // Allow admin's email for testing
-        );
-
-        if (verifiedRecipients.length === 0) {
-            return res.status(400).json({
-                message: 'MailerSend trial account can only send to verified email addresses. Please verify recipient domains in MailerSend dashboard or upgrade your account.'
-            });
-        }
-
-        // Create recipients - use verified emails only
-        const recipients = verifiedRecipients.map(email => new Recipient(email, ''));
-
-        // Use a verified sender - for trial, you might need to use your MailerSend verified email
-        // If admin.email is not verified, use a placeholder or your verified email
-        const verifiedSenderEmail = process.env.MAILERSEND_VERIFIED_EMAIL || admin.email;
-
-        // Create email parameters
-        const emailParams = new EmailParams()
-            .setFrom(new Sender(verifiedSenderEmail, admin.full_name))
-            .setTo(recipients)
-            .setReplyTo(new Sender(admin.email, admin.full_name))
-            .setSubject('Invitation to Join the Alumni Network')
-            .setHtml(`
-                <h1>Welcome to the Alumni Network!</h1>
-                <p>You have been invited to join our alumni directory by ${admin.full_name} (${admin.email}). Please register at <a href="http://localhost:3000/register">our website</a> to connect with fellow alumni.</p>
-                <p>Best regards,<br>${admin.full_name}</p>
-            `);
-
-        await mailersend.email.send(emailParams);
-
-        res.status(200).json({
-            message: `Invitations sent successfully to ${newEmails.length} emails.`,
-        });
-
-    } catch (error) {
-        // Log the actual Nodemailer error for debugging
-        console.error('Error sending invitations:', error);
-        // Provide a generic error message to the client
-        res.status(500).json({ message: 'Failed to send invitations. Check server logs for config errors.' });
+    if (newEmails.length === 0) {
+      return res.status(200).json({ message: 'All provided emails are already registered.' });
     }
+
+    // For MailerSend trial account, you can only send to verified emails
+    // For now, we'll send to the admin's email as a test, or you need to verify recipient domains
+    const verifiedRecipients = newEmails.filter(email =>
+      email.includes('@gmail.com') || email.includes('@yahoo.com') ||
+      email === admin.email // Allow admin's email for testing
+    );
+
+    if (verifiedRecipients.length === 0) {
+      return res.status(400).json({
+        message: 'MailerSend trial account can only send to verified email addresses. Please verify recipient domains in MailerSend dashboard or upgrade your account.'
+      });
+    }
+
+    // Create recipients - use verified emails only
+    const recipients = verifiedRecipients.map(email => new Recipient(email, ''));
+
+    // Use a verified sender - for trial, you might need to use your MailerSend verified email
+    // If admin.email is not verified, use a placeholder or your verified email
+    const verifiedSenderEmail = process.env.MAILERSEND_VERIFIED_EMAIL || admin.email;
+
+    // Create email parameters
+    const emailParams = new EmailParams()
+      .setFrom(new Sender(verifiedSenderEmail, admin.full_name))
+      .setTo(recipients)
+      .setReplyTo(new Sender(admin.email, admin.full_name))
+      .setSubject('Invitation to Join the Alumni Network')
+      .setHtml(`
+        <h1>Welcome to the Alumni Network!</h1>
+        <p>You have been invited to join our alumni directory by ${admin.full_name} (${admin.email}). Please register at <a href="http://localhost:3000/register">our website</a> to connect with fellow alumni.</p>
+        <p>Best regards,<br>${admin.full_name}</p>
+      `);
+
+    await mailersend.email.send(emailParams);
+
+    res.status(200).json({
+      message: `Invitations sent successfully to ${verifiedRecipients.length} emails.`,
+    });
+
+  } catch (error) {
+    // Log the actual error for debugging
+    console.error('Error sending invitations:', error);
+    // Provide a generic error message to the client
+    res.status(500).json({ message: 'Failed to send invitations. Check server logs for config errors.' });
+  }
 };
 
 // --- Export CSV Function ---
 exports.exportAlumniToCSV = async (req, res) => {
-    // ... (content remains the same, assuming it's correct)
-    try {
-        const { nameOrKeyword, gradYear, company, industry, remoteFriendly, hiring, mentorReady } = req.query;
-        // 1. Build Filters (reuse logic from getAlumniDirectory)
-        const filters = {};
-        if (nameOrKeyword) {
-            const searchRegex = new RegExp(nameOrKeyword, 'i');
-            filters.$or = [
-                { full_name: searchRegex }, { company: searchRegex },
-                { industry: searchRegex }, { skills: searchRegex },
-            ];
-        }
-        if (gradYear) filters.graduation_year = Number(gradYear);
-        if (company) filters.company = new RegExp(company, 'i');
-        if (industry) filters.industry = new RegExp(industry, 'i');
-        if (remoteFriendly === 'true') filters.is_remote_friendly = true;
-        if (hiring === 'true') filters.is_hiring = true;
-        if (mentorReady === 'true') filters.is_mentor_ready = true;
-        
-        // 2. Fetch ALL matching data (No limits/skip needed for export)
-        const alumniData = await AlumniProfile.find(filters)
-            .select('full_name email contact_number graduation_year degree current_position company industry location skills contribution_preferences')
-            .lean();
-
-        if (alumniData.length === 0) {
-            return res.status(404).send('No alumni found matching criteria to export.');
-        }
-        // 3. Format data to CSV
-        const headers = ["Full Name", "Email", "Contact", "Graduation Year", "Degree", "Position", "Company", "Industry", "Location", "Skills", "Contributions"];
-        const rows = alumniData.map(alumnus => [
-            `"${alumnus.full_name}"`, alumnus.email, alumnus.contact_number || '', alumnus.graduation_year, alumnus.degree || '',
-            `"${alumnus.current_position || ''}"`, `"${alumnus.company || ''}"`, `"${alumnus.industry || ''}"`,
-            `"${alumnus.location || ''}"`, `"${(alumnus.skills || []).join(', ')}"` ,
-            `"${(alumnus.contribution_preferences || []).join(', ')}"`
-        ].join(','));
-        const csv = [headers.join(','), ...rows].join('\n');
-
-        // 4. Send the CSV file
-        res.header('Content-Type', 'text/csv');
-        res.attachment('alumni_directory_export.csv');
-        res.send(csv);
-
-    } catch (error) {
-        console.error('Error exporting alumni data:', error);
-        res.status(500).json({ message: 'Server error during export.' });
+  try {
+    const { nameOrKeyword, gradYear, company, industry, remoteFriendly, hiring, mentorReady } = req.query;
+    // 1. Build Filters (reuse logic from getAlumniDirectory)
+    const filters = {};
+    if (nameOrKeyword) {
+      const searchRegex = new RegExp(nameOrKeyword, 'i');
+      filters.$or = [
+        { full_name: searchRegex }, { company: searchRegex },
+        { industry: searchRegex }, { skills: { $elemMatch: { $regex: searchRegex } } },
+      ];
     }
+    if (gradYear) filters.graduation_year = Number(gradYear);
+    if (company) filters.company = new RegExp(company, 'i');
+    if (industry) filters.industry = new RegExp(industry, 'i');
+    if (remoteFriendly === 'true') filters.is_remote_friendly = true;
+    if (hiring === 'true') filters.is_hiring = true;
+    if (mentorReady === 'true') filters.is_mentor_ready = true;
+
+    // 2. Fetch ALL matching data (No limits/skip needed for export)
+    const alumniData = await AlumniProfile.find(filters)
+      .select('full_name email contact_number graduation_year degree current_position company industry location skills contribution_preferences')
+      .lean();
+
+    if (alumniData.length === 0) {
+      return res.status(404).send('No alumni found matching criteria to export.');
+    }
+    // 3. Format data to CSV
+    const headers = ["Full Name", "Email", "Contact", "Graduation Year", "Degree", "Position", "Company", "Industry", "Location", "Skills", "Contributions"];
+    const rows = alumniData.map(alumnus => [
+      `"${alumnus.full_name}"`, alumnus.email, alumnus.contact_number || '', alumnus.graduation_year, alumnus.degree || '',
+      `"${alumnus.current_position || ''}"`, `"${alumnus.company || ''}"`, `"${alumnus.industry || ''}"`,
+      `"${alumnus.location || ''}"`, `"${(alumnus.skills || []).join(', ')}"` ,
+      `"${(alumnus.contribution_preferences || []).join(', ')}"`
+    ].join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+
+    // 4. Send the CSV file
+    res.header('Content-Type', 'text/csv');
+    res.attachment('alumni_directory_export.csv');
+    res.send(csv);
+
+  } catch (error) {
+    console.error('Error exporting alumni data:', error);
+    res.status(500).json({ message: 'Server error during export.' });
+  }
 };
