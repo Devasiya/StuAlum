@@ -431,10 +431,6 @@ const MentorshipDashboard = ({ onSidebarToggle }) => {
                                                     </div>
                                                 </div>
                                                 <div className="mb-3">
-                                                    <div className="flex items-center mb-1">
-                                                        <span className="text-yellow-500">⭐</span>
-                                                        <span className="ml-1 text-sm text-gray-300">{mentor.rating} ({mentor.mentee_count} mentees)</span>
-                                                    </div>
                                                     <div className="text-sm text-gray-300 mb-2">
                                                         Match Score: {mentor.ai_score}%
                                                     </div>
@@ -494,10 +490,14 @@ const MentorshipDashboard = ({ onSidebarToggle }) => {
                                                     </div>
                                                     <div className="flex gap-2">
                                                         <button
-                                                            onClick={() => setShowScheduleModal(true)}
+                                                            onClick={() => {
+                                                                setSelectedMentee(connection.mentor_id);
+                                                                setMessageText(`Hi ${connection.mentor_id?.full_name}, I have a question about our mentorship.`);
+                                                                setShowMessageModal(true);
+                                                            }}
                                                             className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm hover:scale-105 transition-all duration-200"
                                                         >
-                                                            Reschedule
+                                                            Message
                                                         </button>
                                                     </div>
                                                 </div>

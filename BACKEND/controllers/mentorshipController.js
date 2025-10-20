@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const MentorshipRequest = require('../models/MentorshipRequest');
 const MentorshipPreference = require('../models/MentorshipPreference');
 const MentorshipSession = require('../models/MentorshipSession');
@@ -843,13 +844,13 @@ exports.createOrGetConversation = async (req, res) => {
         // Check if conversation already exists
         let conversation = await Conversation.findOne({
             mentorship_request_id: mentorshipRequest._id,
-            participants: { $all: [userId, otherUserId] }
+            participants: { $all: [new mongoose.Types.ObjectId(userId), new mongoose.Types.ObjectId(otherUserId)] }
         });
 
         if (!conversation) {
             // Create new conversation
             conversation = new Conversation({
-                participants: [userId, otherUserId],
+                participants: [new mongoose.Types.ObjectId(userId), new mongoose.Types.ObjectId(otherUserId)],
                 mentorship_request_id: mentorshipRequest._id
             });
             await conversation.save();

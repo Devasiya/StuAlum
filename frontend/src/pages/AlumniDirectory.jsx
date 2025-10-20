@@ -100,60 +100,93 @@ const AlumniDirectory = ({ onSidebarToggle }) => {
         <>
             <Navbar onSidebarToggle={onSidebarToggle} />
             <main className="min-h-screen overflow-y-auto pt-[60px] px-10 py-5 bg-[#111019] text-white">
-                <h1 className="text-3xl font-bold mb-6">Alumni Directory</h1>
+                <div className="max-w-7xl mx-auto">
+                    <h1 className="text-4xl font-bold mb-8 text-center bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
+                        Alumni Directory
+                    </h1>
 
-                {/* Filter and Search Bar */}
-                <AlumniFilterBar filters={filters} onFilterChange={handleFilterChange} />
-
-                <div className="alumni-results my-6">
-                    <h2 className="text-xl font-semibold mb-4 text-white">
-                        Alumni Results
-                    </h2>
-
-                    {totalResults > 0 && (
-                        <p className="text-sm text-gray-300 mb-4">
-                            Showing {currentPageStart}-{currentPageEnd} of {totalResults} results
-                        </p>
-                    )}
-
-                    {/* Action buttons */}
-                    <div className="flex space-x-4 mb-6">
-                        <button
-                            className="px-4 py-2 border border-gray-600 rounded text-gray-300 hover:bg-gray-700"
-                            onClick={handleExport}
-                        >
-                            <i className="fas fa-download mr-2"></i> Export
-                        </button>
-                        {userRole === 'admin' && (
-                            <button onClick={() => setIsInviteModalOpen(true)} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                                <i className="fas fa-user-plus mr-2"></i> Invite Alumni
-                            </button>
-                        )}
+                    {/* Filter and Search Bar */}
+                    <div className="mb-8">
+                        <AlumniFilterBar filters={filters} onFilterChange={handleFilterChange} />
                     </div>
 
-                    {/* Alumni Grid */}
-                    {loading ? (
-                        <p className="text-white">Loading...</p>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {alumniData.map(alumnus => (
-                                <AlumniCard key={alumnus.id} alumnus={alumnus} />
-                            ))}
+                    <div className="alumni-results">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-2xl font-semibold text-white">
+                                Alumni Results
+                            </h2>
 
-                            {alumniData.length === 0 && (
-                                <p className="text-gray-400">No alumni found matching your criteria.</p>
-                            )}
+                            {/* Action buttons */}
+                            <div className="flex space-x-4">
+                                <button
+                                    className="px-6 py-3 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-700 hover:border-gray-500 transition-all duration-200 flex items-center space-x-2"
+                                    onClick={handleExport}
+                                >
+                                    <i className="fas fa-download"></i>
+                                    <span>Export</span>
+                                </button>
+                                {userRole === 'admin' && (
+                                    <button
+                                        onClick={() => setIsInviteModalOpen(true)}
+                                        className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2 shadow-lg"
+                                    >
+                                        <i className="fas fa-user-plus"></i>
+                                        <span>Invite Alumni</span>
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                    )}
 
-                    {/* Pagination Controls (Placeholder for future implementation) */}
-                    {totalResults > LIMIT && (
-                        <div className="flex justify-center mt-6 space-x-4">
-                            <button disabled={page === 1} className="px-4 py-2 border border-gray-600 rounded text-gray-300 hover:bg-gray-700">Previous</button>
-                            <span className="py-2 text-white">Page {page}</span>
-                            <button disabled={page * LIMIT >= totalResults} className="px-4 py-2 border border-gray-600 rounded text-gray-300 hover:bg-gray-700">Next</button>
-                        </div>
-                    )}
+                        {totalResults > 0 && (
+                            <p className="text-sm text-gray-400 mb-6 text-center">
+                                Showing {currentPageStart}-{currentPageEnd} of {totalResults} results
+                            </p>
+                        )}
+
+                        {/* Alumni Grid */}
+                        {loading ? (
+                            <div className="flex justify-center items-center py-20">
+                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                                {alumniData.map(alumnus => (
+                                    <AlumniCard key={alumnus.id} alumnus={alumnus} />
+                                ))}
+
+                                {alumniData.length === 0 && (
+                                    <div className="col-span-full text-center py-20">
+                                        <i className="fas fa-users text-6xl text-gray-600 mb-4"></i>
+                                        <p className="text-xl text-gray-400">No alumni found matching your criteria.</p>
+                                        <p className="text-gray-500 mt-2">Try adjusting your filters or search terms.</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Pagination Controls */}
+                        {totalResults > LIMIT && (
+                            <div className="flex justify-center mt-12 space-x-6">
+                                <button
+                                    disabled={page === 1}
+                                    className="px-6 py-3 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-700 hover:border-gray-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                                >
+                                    <i className="fas fa-chevron-left"></i>
+                                    <span>Previous</span>
+                                </button>
+                                <div className="flex items-center px-4 py-3 bg-[#1a1a2e] rounded-lg border border-gray-600">
+                                    <span className="text-white font-medium">Page {page}</span>
+                                </div>
+                                <button
+                                    disabled={page * LIMIT >= totalResults}
+                                    className="px-6 py-3 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-700 hover:border-gray-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                                >
+                                    <span>Next</span>
+                                    <i className="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </main>
             {isInviteModalOpen && (
