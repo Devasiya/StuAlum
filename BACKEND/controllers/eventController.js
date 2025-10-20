@@ -1,25 +1,23 @@
-// BACKEND/controllers/eventController.js (FINALIZED)
-
-const Event = require('../models/Event'); 
+const Event = require('../models/Event');
 const mongoose = require('mongoose');
 
 // Helper function to determine the Mongoose model name based on role
 const getProfileType = (role) => {
     if (role === 'student') return 'StudentProfile';
     if (role === 'alumni') return 'AlumniProfile';
-    if (role === 'admin') return 'AdminProfile'; 
+    if (role === 'admin') return 'AdminProfile';
     return null;
 };
 
 // Helper to determine the start date query based on the 'dateRange' filter
 const getDateQuery = (dateRange) => {
     const now = new Date();
-    let query = { $gte: now }; 
+    let query = { $gte: now };
 
     if (dateRange === 'This month') {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         query = { $gte: startOfMonth };
-    } 
+    }
     return query;
 };
 
@@ -30,7 +28,6 @@ const verifyEventOwnership = async (eventId, userId, res) => {
         res.status(404).json({ message: 'Event not found.' });
         return false;
     }
-    // Compare the event's creator ID (Mongoose ObjectId) with the authenticated user ID (String)
     if (event.created_by.toString() !== userId) {
         res.status(403).json({ message: 'Unauthorized. You do not own this event.' });
         return false;
@@ -38,13 +35,15 @@ const verifyEventOwnership = async (eventId, userId, res) => {
     return event;
 };
 
-
 // GET /api/events - Retrieve filtered list of upcoming events
 exports.getEvents = async (req, res) => {
     try {
         const { category, audience, dateRange, location } = req.query;
+        // Get user ID for registration status check
+        const userId = req.user ? req.user.id : null;
+
         let query = { status: 'scheduled' };
-        
+
         query.start_time = getDateQuery(dateRange);
 
         if (category && category.toLowerCase() !== 'all') {
@@ -54,16 +53,35 @@ exports.getEvents = async (req, res) => {
             query.audience = audience;
         }
         if (location && location.toLowerCase() !== 'all') {
-            query.event_mode = location; 
+            query.event_mode = location;
         }
 
+        // 1. Fetch events, including the registered_users array
         const events = await Event.find(query)
             .sort({ start_time: 1 })
-            // 🚨 FIX: Explicitly select 'created_by' for frontend ownership check
-            .select('title description category event_mode start_time end_time capacity created_by') 
+            // Now includes 'registered_count' and 'registered_users' for frontend logic
+            .select('title description category event_mode start_time end_time capacity created_by registered_users registered_count')
             .lean();
 
-        res.json(events);
+        // 2. Map and check registration status for the current user
+        const eventsWithStatus = events.map(event => {
+            let isRegistered = false;
+
+            if (userId && event.registered_users) {
+                isRegistered = event.registered_users.some(
+                    // Check if the current user's ID exists in the registered_users array
+                    item => item.user_id && item.user_id.toString() === userId.toString()
+                );
+            }
+
+            // Return the event object with the new status flag for the frontend
+            return {
+                ...event,
+                userRegistered: isRegistered,
+            };
+        });
+
+        res.json(eventsWithStatus);
     } catch (error) {
         console.error('Error fetching events:', error);
         res.status(500).json({ message: 'Error fetching events.' });
@@ -76,9 +94,9 @@ exports.createEvent = async (req, res) => {
         const { id: created_by, role } = req.user;
         const creator_model_type = getProfileType(role);
 
-        const { 
-            title, description, category, audience, location, event_mode, 
-            start_time, end_time, capacity 
+        const {
+            title, description, category, audience, location, event_mode,
+            start_time, end_time, capacity
         } = req.body;
 
         if (!title || !category || !start_time || !end_time || !event_mode) {
@@ -110,11 +128,10 @@ exports.createEvent = async (req, res) => {
 exports.registerForEvent = async (req, res) => {
     try {
         const { eventId } = req.params;
-        const { id: userId, role } = req.user; 
-        
+        const { id: userId, role } = req.user;
+
         const registered_user_model_type = getProfileType(role);
 
-        // 1. Fetch event, ensuring we get the registered list and capacity
         const event = await Event.findById(eventId).select('status capacity registered_users');
 
         if (!event) {
@@ -123,29 +140,26 @@ exports.registerForEvent = async (req, res) => {
         if (event.status !== 'scheduled') {
             return res.status(400).json({ message: `Cannot register: Event is currently ${event.status}.` });
         }
-        
-        // Check for duplicate registration
+
         if (event.registered_users.some(item => item.user_id.toString() === userId.toString())) {
             return res.status(409).json({ message: 'You are already registered for this event.' });
         }
-        
-        // Check capacity
+
         if (event.capacity > 0 && event.registered_users.length >= event.capacity) {
             return res.status(409).json({ message: 'Registration failed: Event is full.' });
         }
-        
-        // 2. Update the event document atomically
+
         await Event.updateOne(
             { _id: eventId },
-            { 
-                $push: { 
-                    registered_users: { 
+            {
+                $push: {
+                    registered_users: {
                         user_id: userId,
                         registered_at: new Date()
                     }
-                }, 
-                $set: { registered_user_model_type }, 
-                $inc: { registered_count: 1 } 
+                },
+                $set: { registered_user_model_type },
+                $inc: { registered_count: 1 }
             }
         ).exec();
 
@@ -161,20 +175,17 @@ exports.registerForEvent = async (req, res) => {
 exports.deleteEvent = async (req, res) => {
     try {
         const { eventId } = req.params;
-        const { id: userId, role } = req.user; 
-        
-        // Ensure only Admins can attempt deletion (optional, but good practice)
+        const { id: userId, role } = req.user;
+
         if (role !== 'admin') {
             return res.status(403).json({ message: 'Only Admins can delete events.' });
         }
 
-        // 1. Verify ownership and existence
         const event = await verifyEventOwnership(eventId, userId, res);
-        if (!event) return; 
+        if (!event) return;
 
-        // 2. Delete the event
         await Event.deleteOne({ _id: eventId });
-        
+
         res.json({ message: 'Event deleted successfully.' });
 
     } catch (error) {

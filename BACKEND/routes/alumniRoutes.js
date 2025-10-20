@@ -6,10 +6,10 @@ const upload = require('../middleware/uploadMiddleware');
 const auth = require('../middleware/auth');
 const { checkRole } = require('../middleware/checkRole');
 const {
-    registerAlumni,
-    loginAlumni,
-    getAlumniDirectory, // Existing import for directory list
-    getAlumniProfileById,
+    registerAlumni,
+    loginAlumni,
+    getAlumniDirectory, // Existing import for directory list
+    getAlumniProfileById,
     // 🛑 ADDED: Import the function to handle CSV export
     exportAlumniToCSV,
     inviteAlumni
@@ -18,8 +18,8 @@ const {
 // --- Authentication Routes ---
 
 router.post('/register', upload.fields([
-    { name: 'verificationFile', maxCount: 1 },
-    { name: 'profile_photo_url', maxCount: 1 },
+    { name: 'verificationFile', maxCount: 1 },
+    { name: 'profile_photo_url', maxCount: 1 },
 ]), registerAlumni);
 
 router.post('/login', loginAlumni);
@@ -31,7 +31,7 @@ router.get('/directory', getAlumniDirectory);
 
 // 🛑 NEW ROUTE: Handles the export of the directory data to CSV
 // This route is called by the frontend's "Export" button
-router.get('/export', exportAlumniToCSV); 
+router.get('/export', exportAlumniToCSV);
 
 // Existing: Dynamic route to fetch a single alumni profile by ID
 router.get('/:id', getAlumniProfileById);

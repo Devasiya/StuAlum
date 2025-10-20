@@ -2,59 +2,85 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const dotenv = require('dotenv');
+
+// NOTE: connectDB function should be verified to handle its own connection errors
 const connectDB = require('./config/db');
 
+// 1. Load environment variables first
 dotenv.config();
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Connect to MongoDB
-connectDB();
+// Function to initialize and start the server
+const startServer = async () => {
+    try {
+        // 2. CRITICAL STEP: Await the database connection before proceeding
+        await connectDB();
 
-require('./models/StudentProfile');
-require('./models/AlumniProfile');
-require('./models/AdminProfile');
-// Add core forum models (These models are directly involved in the failed query)
-require('./models/PostReport');
-require('./models/PostComment');
-require('./models/Post');
-require('./models/PostLike');
-require('./models/ForumCategory');
-require('./models/Event');
-// Add mentorship models
-require('./models/MentorshipRequest');
-require('./models/MentorshipPreference');
-require('./models/MentorshipSession');
-require('./models/MentorshipMatch');
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+        // 3. Require Mongoose Models (Must be done after DB connection attempt)
+        // Profile Models
+        require('./models/StudentProfile');
+        require('./models/AlumniProfile');
+        require('./models/AdminProfile');
 
-// Global logging
-app.use((req, res, next) => {
-  console.log(`Incoming ${req.method} ${req.url}`);
-  next();
-});
+        // Resource Models (Ensure these exist)
+        require('./models/PrepResource'); // <--- CHECK THIS FILE PATH
+        require('./models/CareerArticleVideo');
 
-// Routes
-app.use('/api/alumni', require('./routes/alumniRoutes'));
-app.use('/api/student', require('./routes/studentRoutes'));
-app.use('/api/admin', require('./routes/adminRoutes'));
+        // Core Forum Models
+        require('./models/PostReport');
+        require('./models/PostComment');
+        require('./models/Post');
+        require('./models/PostLike');
+        require('./models/ForumCategory');
 
-// FORUM ROUTES
-app.use('/api/forums', require('./routes/forumRoutes'));
+        // Event Model
+        require('./models/Event');
 
-// EVENTS ROUTER
-app.use('/api/events', require('./routes/eventRoutes'));
+        // Add mentorship models
+        require('./models/MentorshipRequest');
+        require('./models/MentorshipPreference');
+        require('./models/MentorshipSession');
+        require('./models/MentorshipMatch');
 
-// MESSAGES ROUTER
-app.use('/api/messages', require('./routes/messageRoutes'));
+        // Middleware (Setup the application context)
+        app.use(cors());
+        app.use(express.json());
+        app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// MENTORSHIP ROUTER
-app.use('/api/mentorship', require('./routes/mentorshipRoutes'));
+        // Global logging
+        app.use((req, res, next) => {
+          console.log(`Incoming ${req.method} ${req.url}`);
+          next();
+        });
 
+        // Routes
+        app.use('/api/alumni', require('./routes/alumniRoutes'));
+        app.use('/api/student', require('./routes/studentRoutes'));
+        app.use('/api/admin', require('./routes/adminRoutes'));
+        app.use('/api/forums', require('./routes/forumRoutes'));
+        app.use('/api/events', require('./routes/eventRoutes'));
+        app.use('/api/career', require('./routes/careerRoutes'));
 
-app.get('/', (req, res) => res.send('Hello World!'));
+        // MESSAGES ROUTER
+        app.use('/api/messages', require('./routes/messageRoutes'));
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+        // MENTORSHIP ROUTER
+        app.use('/api/mentorship', require('./routes/mentorshipRoutes'));
+
+        // Root Route
+        app.get('/', (req, res) => res.send('Hello World!'));
+
+        // 4. Start the server only after all async operations are done
+        app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+    } catch (error) {
+        // If DB connection fails, log it and potentially exit
+        console.error("Failed to connect to the database or start server:", error.message);
+        process.exit(1); // Exit with a failure code
+    }
+}
+
+// Execute the starting function
+startServer();

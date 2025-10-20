@@ -16,8 +16,8 @@ const api = axios.create({
 api.interceptors.request.use(
     (config) => {
         // Get the token from local storage or wherever you store it after login
-        const token = localStorage.getItem('token'); 
-        
+        const token = localStorage.getItem('token');
+
         if (token) {
             // Set the Authorization header with Bearer token as required by your backend auth.js middleware
             config.headers['Authorization'] = `Bearer ${token}`;

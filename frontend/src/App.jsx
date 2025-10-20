@@ -4,38 +4,37 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 
 // Import the HOC
-import withSidebarToggle from './hocs/withSidebarToggle'; 
+import withSidebarToggle from './hocs/withSidebarToggle';
 
-// Feature Pages
+// Import all page components
 import Home from './pages/home';
-
-// Forums & Forum Features
-import Forums from './pages/Forum/Forums'; 
-import PostDetail from './pages/Forum/PostDetail'; 
-import CreatePostForm from './pages/Forum/CreatePostForm'; 
-import EditPostForm from './pages/Forum/EditPostForm'; 
-
-// Admin
+import Forums from './pages/Forum/Forums';
+import PostDetail from './pages/Forum/PostDetail';
+import CreatePostForm from './pages/Forum/CreatePostForm';
+import EditPostForm from './pages/Forum/EditPostForm';
 import ReportDashboard from './pages/Admin/ReportDashboard';
-import AdminDirectory from './pages/Admin/AdminDirectory';
-
-// Registration & Auth
 import AlumniRegistration from './components/Registration/AlumniRegistration';
 import StudentRegistration from './components/Registration/StudentRegistration';
 import AdminRegistration from './components/Registration/AdminRegistration';
 import AdminLogin from './pages/Login/AdminLogin';
 import AlumniLogin from './pages/Login/AlumniLogin';
 import StudentLogin from './pages/Login/StudentLogin';
-import EventsCalendar from './pages/Events/EventsCalendar'; 
+import EventsCalendar from './pages/Events/EventsCalendar';
 import CreateEventForm from './pages/Events/CreateEventForm';
-
-// Alumni Directory & Profile
 import AlumniDirectory from './pages/AlumniDirectory';
 import AlumniProfilePage from './pages/AlumniProfilePage';
 import StudentDirectory from './pages/StudentDirectory';
 import StudentProfilePage from './pages/StudentProfilePage';
 import Messages from './pages/Messages';
 import MentorshipDashboard from './pages/MentorshipDashboard';
+
+// 🚨 FIX 1: Import base component (renamed to avoid conflict with the layout constant)
+import CareerGuidanceComponent from './pages/Career/CareerGuidance';
+// 🚨 FIX 2: Import the base component for the chat interface
+import AIChatInterface from './pages/Career/AIChatInterface';
+
+// Import the utility function to get user role
+import { getCurrentUserRole } from './utils/authUtils';
 
 // --- WRAP FEATURE COMPONENTS WITH HOC ---
 const LayoutHome = withSidebarToggle(Home);
@@ -44,7 +43,6 @@ const LayoutPostDetail = withSidebarToggle(PostDetail);
 const LayoutCreatePostForm = withSidebarToggle(CreatePostForm);
 const LayoutEditPostForm = withSidebarToggle(EditPostForm);
 const LayoutReportDashboard = withSidebarToggle(ReportDashboard);
-const LayoutAdminDirectory = withSidebarToggle(AdminDirectory);
 const LayoutEvents = withSidebarToggle(EventsCalendar);
 const LayoutCreateEventForm = withSidebarToggle(CreateEventForm);
 const LayoutAlumniDirectory = withSidebarToggle(AlumniDirectory);
@@ -54,56 +52,50 @@ const LayoutStudentProfilePage = withSidebarToggle(StudentProfilePage);
 const LayoutMessages = withSidebarToggle(Messages);
 const LayoutMentorshipDashboard = withSidebarToggle(MentorshipDashboard);
 
+// 🚨 FIX 3: Correctly wrap the imported Career Guidance component
+const LayoutCareer = withSidebarToggle(CareerGuidanceComponent);
+// 🚨 FIX 4: Correctly wrap the imported AI Chat component
+const LayoutAIChat = withSidebarToggle(AIChatInterface);
 
-// --- Helper Function (Placeholder for your user authentication logic) ---
-// NOTE: This must be defined outside the App component or use a React Hook.
-const getCurrentUserRole = () => {
-    // Replace with your actual authentication context or role check
-    return 'user'; 
-};
-
-
+// Main App Component
 const App = () => {
-    // RESOLVED CONFLICT: Keeping the userRole logic
-    // FETCH USER ROLE: This is a simplification; use your actual auth context/hook
-    const userRole = getCurrentUserRole(); 
-    
+    const userRole = getCurrentUserRole();
+
     return(
         <>
             <Routes>
-                {/* --- FEATURE ROUTES (Use the wrapped components) --- */}
+                {/* --- FEATURE ROUTES --- */}
                 <Route path="/" element={<LayoutHome />} />
-                
+
                 {/* Forums Routes */}
                 <Route path="/forums" element={<LayoutForums />} />
-                <Route path="/forums/posts/:postId" element={<LayoutPostDetail />} /> 
-                <Route path="/forums/new" element={<LayoutCreatePostForm />} /> 
-                <Route path="/forums/edit/:postId" element={<LayoutEditPostForm />} /> 
-                
-                {/* RESOLVED CONFLICT: Combining Admin, Alumni, and Events routes */}
+                <Route path="/forums/posts/:postId" element={<LayoutPostDetail />} />
+                <Route path="/forums/new" element={<LayoutCreatePostForm />} />
+                <Route path="/forums/edit/:postId" element={<LayoutEditPostForm />} />
 
-                {/* Admin Dashboard */}
+                {/* ADMIN ROUTE */}
                 <Route path="/admin/reports" element={<LayoutReportDashboard />} />
-                <Route path="/admin/directory" element={<LayoutAdminDirectory />} />
 
-                {/* Alumni Directory & Profile Routes (From HEAD) */}
-                <Route path="/alumni-directory" element={<LayoutAlumniDirectory />} />
-                <Route path="/alumni/profile/:id" element={<LayoutAlumniProfilePage />} />
-
-                {/* Student Directory Route */}
-                <Route path="/student-directory" element={<LayoutStudentDirectory />} />
-                <Route path="/student/profile/:id" element={<LayoutStudentProfilePage />} />
-
-                {/* Messages Routes */}
-                <Route path="/messages" element={<LayoutMessages />} />
-                <Route path="/messages/:conversationId" element={<LayoutMessages />} />
-
-                {/* Events Routes (From merged branch) */}
+                {/* EVENTS ROUTES */}
                 <Route path="/events" element={<LayoutEvents />} />
                 <Route path="/events/new" element={<LayoutCreateEventForm />} />
 
-                {/* Mentorship Dashboard */}
+                {/* DIRECTORY ROUTES */}
+                <Route path="/alumni-directory" element={<LayoutAlumniDirectory />} />
+                <Route path="/alumni/profile/:id" element={<LayoutAlumniProfilePage />} />
+                <Route path="/student-directory" element={<LayoutStudentDirectory />} />
+                <Route path="/student/profile/:id" element={<LayoutStudentProfilePage />} />
+
+                {/* MESSAGES ROUTES */}
+                <Route path="/messages" element={<LayoutMessages />} />
+                <Route path="/messages/:conversationId" element={<LayoutMessages />} />
+
+                {/* MENTORSHIP ROUTE */}
                 <Route path="/mentorship" element={<LayoutMentorshipDashboard />} />
+
+                {/* 🚨 CAREER ROUTES */}
+                <Route path="/career-guidance" element={<LayoutCareer />} />
+                <Route path="/career-guidance/ai-chat" element={<LayoutAIChat />} /> {/* Now correctly wrapped */}
 
                 {/* --- AUTH ROUTES --- */}
                 <Route path="/login/admin" element={<AdminLogin />} />
@@ -117,7 +109,7 @@ const App = () => {
                 <Route path="*" element={<div>404 - Page Not Found</div>} />
             </Routes>
         </>
-    )
+    );
 };
 
 export default App;
