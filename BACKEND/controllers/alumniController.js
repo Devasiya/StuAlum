@@ -158,7 +158,8 @@ exports.getAlumniDirectory = async (req, res) => {
       id: alumnus._id, user_id: alumnus._id, name: alumnus.full_name, title: alumnus.current_position,
       company: alumnus.company, location: alumnus.location,
       profileImage: alumnus.profile_photo_url || '/path/to/default/image.png',
-      tags: [...(alumnus.skills || []).slice(0, 3), ...(alumnus.contribution_preferences || []).slice(0, 2)].slice(0, 5),
+      skills: (alumnus.skills || []).slice(0, 3),
+      contribution_preferences: (alumnus.contribution_preferences || []).slice(0, 2),
       gradYear: alumnus.graduation_year,
     }));
 
