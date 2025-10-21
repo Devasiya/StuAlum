@@ -11,6 +11,19 @@ const messageSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    sender_email: {
+        type: String,
+        required: true
+    },
+    sender_role: {
+        type: String,
+        enum: ['student', 'alumni', 'admin'],
+        required: true
+    },
+    sender_name: {
+        type: String,
+        default: ''
+    },
     message_text: {
         type: String,
         required: true,
@@ -19,7 +32,27 @@ const messageSchema = new mongoose.Schema({
     sent_at: {
         type: Date,
         default: Date.now
-    }
+    },
+    edited_at: {
+        type: Date,
+        default: null
+    },
+    deleted_at: {
+        type: Date,
+        default: null
+    },
+    is_deleted: {
+        type: Boolean,
+        default: false
+    },
+    is_read: {
+        type: Boolean,
+        default: false
+    },
+    deleted_by_users: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }]
 }, {
     timestamps: true
 });
