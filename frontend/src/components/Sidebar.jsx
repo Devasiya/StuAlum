@@ -1,16 +1,9 @@
 // frontend/src/components/Sidebar.jsx
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-
-// 🚨 IMPORTANT: Replace this MOCK hook with your actual authentication logic.
-// This is used to determine if the user is an admin.
-const useAuth = () => {
-    // For demonstration, simulating a user object where 'role' is stored.
-    // You should retrieve this from your global state/token utility.
-    const user = { role: 'admin' }; // Change to 'student' or 'alumni' to test visibility
-    return { userRole: user?.role };
-};
+import axios from 'axios';
+import { getCurrentUserIdFromToken, getCurrentUserRole } from '../utils/authUtils';
 
 // 🚨 NEW MENU ITEM FOR ADMINS
 const adminMenuItem = {
@@ -179,7 +172,7 @@ const menuItems = [
                 <path d="M22 5l-10 7L2 5" />
             </svg>
         ),
-        badge: 9,
+        badge: 'unreadCount', // Dynamic badge for unread messages
     },
     {
         label: 'Badges/Points',
@@ -254,9 +247,10 @@ const menuItems = [
 const Sidebar = ({ onLogoClick, isOpen, onClose }) => {
     const navigate = useNavigate();
     const location = useLocation();
+    const [unreadCount, setUnreadCount] = useState(0);
 
-    // 🚨 FETCH USER ROLE: Assuming useAuth provides the role
-    const { userRole } = useAuth();
+    // 🚨 FETCH USER ROLE: Using actual auth utility
+    const userRole = getCurrentUserRole();
     const isAdmin = userRole === 'admin';
 
     const sidebarClasses = `
@@ -273,6 +267,28 @@ const Sidebar = ({ onLogoClick, isOpen, onClose }) => {
     const isMenuItemActive = (route) => {
         return location.pathname === route ? 'bg-purple-700 font-semibold' : 'font-normal';
     };
+
+    // Fetch unread message count
+    useEffect(() => {
+        const fetchUnreadCount = async () => {
+            if (!getCurrentUserIdFromToken()) return;
+
+            try {
+                const response = await axios.get('http://localhost:5000/api/messages/conversations', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                const totalUnread = response.data.reduce((sum, conv) => sum + (conv.unreadCount || 0), 0);
+                setUnreadCount(totalUnread);
+            } catch (error) {
+                console.error('Error fetching unread count:', error);
+            }
+        };
+
+        fetchUnreadCount();
+        // Poll every 30 seconds for updates
+        const interval = setInterval(fetchUnreadCount, 30000);
+        return () => clearInterval(interval);
+    }, []);
 
     return (
         <>
@@ -313,7 +329,7 @@ const Sidebar = ({ onLogoClick, isOpen, onClose }) => {
                                 <span>{item.label}</span>
                                 {item.badge && (
                                     <span className="bg-red-600 text-white rounded-full w-5 h-5 text-xs text-center absolute right-5 flex items-center justify-center">
-                                        {item.badge}
+                                        {item.label === 'Messages' ? (unreadCount > 99 ? '99+' : unreadCount) : item.badge}
                                     </span>
                                 )}
                             </li>

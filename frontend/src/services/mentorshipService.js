@@ -118,6 +118,18 @@ const mentorshipService = {
         return response.data;
     },
 
+    // Edit a message
+    editMessage: async (messageId, messageText) => {
+        const response = await api.put(`/mentorship/messages/${messageId}`, { message_text: messageText });
+        return response.data;
+    },
+
+    // Delete a message
+    deleteMessage: async (messageId) => {
+        const response = await api.delete(`/mentorship/messages/${messageId}`);
+        return response.data;
+    },
+
     // Get all conversations for the user
     getConversations: async () => {
         const response = await api.get('/mentorship/conversations');
