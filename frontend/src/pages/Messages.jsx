@@ -24,6 +24,8 @@ const Messages = () => {
     const [selectedMessage, setSelectedMessage] = useState(null);
     const [replyTo, setReplyTo] = useState(null);
     const [menuTimeout, setMenuTimeout] = useState(null);
+    const [triggerHovered, setTriggerHovered] = useState(false);
+    const [menuHovered, setMenuHovered] = useState(false);
 
     const messagesEndRef = useRef(null);
 
@@ -214,6 +216,17 @@ const Messages = () => {
         };
     }, [showContextMenu]);
 
+    // Handle menu visibility based on hover states
+    useEffect(() => {
+        if (triggerHovered || menuHovered) {
+            setShowContextMenu(true);
+        } else {
+            const timeout = setTimeout(() => setShowContextMenu(false), 300);
+            setMenuTimeout(timeout);
+            return () => clearTimeout(timeout);
+        }
+    }, [triggerHovered, menuHovered]);
+
     return (
         <div className="messages-page flex h-screen bg-gray-50">
             {/* Conversations Sidebar */}
@@ -391,7 +404,10 @@ const Messages = () => {
                                                                             onMouseEnter={(e) => {
                                                                                 setSelectedMessage(message);
                                                                                 setContextMenuPosition({ x: e.clientX, y: e.clientY });
-                                                                                setShowContextMenu(true);
+                                                                                setTriggerHovered(true);
+                                                                            }}
+                                                                            onMouseLeave={() => {
+                                                                                setTriggerHovered(false);
                                                                             }}
                                                                         >
                                                                             <span className="text-xs text-gray-400 cursor-pointer hover:text-gray-600">
@@ -422,16 +438,10 @@ const Messages = () => {
                                     transform: 'translate(-50%, -100%)'
                                 }}
                                 onMouseEnter={() => {
-                                    // Clear any existing timeout when entering menu
-                                    if (menuTimeout) {
-                                        clearTimeout(menuTimeout);
-                                        setMenuTimeout(null);
-                                    }
+                                    setMenuHovered(true);
                                 }}
                                 onMouseLeave={() => {
-                                    // Delay hiding when leaving menu
-                                    const timeout = setTimeout(() => setShowContextMenu(false), 200);
-                                    setMenuTimeout(timeout);
+                                    setMenuHovered(false);
                                 }}
                             >
                                 <div className="py-2">

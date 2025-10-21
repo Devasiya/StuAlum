@@ -31,7 +31,8 @@ const auth = (req, res, next) => {
         // 5. Attach user data to request object
         req.user = {
             id: decoded.id,
-            role: decoded.role.toLowerCase()
+            role: decoded.role.toLowerCase(),
+            email: decoded.email
         };
 
         next();
