@@ -327,7 +327,7 @@ const Sidebar = ({ onLogoClick, isOpen, onClose }) => {
                             >
                                 {item.icon}
                                 <span>{item.label}</span>
-                                {item.badge && (
+                                {item.badge && unreadCount > 0 && (
                                     <span className="bg-red-600 text-white rounded-full w-5 h-5 text-xs text-center absolute right-5 flex items-center justify-center">
                                         {item.label === 'Messages' ? (unreadCount > 99 ? '99+' : unreadCount) : item.badge}
                                     </span>

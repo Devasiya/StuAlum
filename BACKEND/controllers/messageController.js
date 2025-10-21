@@ -26,13 +26,14 @@ exports.getConversations = async (req, res) => {
                 const otherParticipantDoc = await ConversationParticipant.findOne({
                     conversation_id: conversation._id,
                     user_id: { $ne: userId }
-                }).populate('user_id');
+                });
 
-                if (!otherParticipantDoc || !otherParticipantDoc.user_id) return null;
+                if (!otherParticipantDoc) return null;
 
-                const otherUser = otherParticipantDoc.user_id;
+                const otherUser = await User.findById(otherParticipantDoc.user_id);
+                if (!otherUser) return null;
 
-                // Get profile based on role
+                // Get profile based on email
                 let profile = null;
                 if (otherUser.role === 'alumni') {
                     profile = await AlumniProfile.findOne({ email: otherUser.email });
@@ -42,8 +43,10 @@ exports.getConversations = async (req, res) => {
                     profile = await StudentProfile.findOne({ email: otherUser.email });
                 }
 
-                // Get last message
-                const lastMessage = await Message.findOne({ conversation_id: conversation._id })
+                // Get last message (include deleted messages for sidebar display)
+                const lastMessage = await Message.findOne({
+                    conversation_id: conversation._id
+                })
                     .sort({ sent_at: -1 })
                     .populate('sender_id', 'full_name');
 
@@ -61,7 +64,7 @@ exports.getConversations = async (req, res) => {
                     title: conversation.title,
                     otherParticipant: {
                         _id: otherUser._id,
-                        full_name: profile?.full_name || otherUser.email,
+                        full_name: profile?.full_name || otherUser.email || 'Unknown User',
                         email: otherUser.email,
                         role: otherUser.role,
                         profile_photo_url: profile?.profile_photo_url,
@@ -205,31 +208,32 @@ exports.getConversationMessages = async (req, res) => {
         const otherParticipantDoc = await ConversationParticipant.findOne({
             conversation_id: conversationId,
             user_id: { $ne: userId }
-        }).populate('user_id');
+        });
 
         let otherParticipant = null;
-        if (otherParticipantDoc && otherParticipantDoc.user_id) {
-            const otherUser = otherParticipantDoc.user_id;
+        if (otherParticipantDoc) {
+            const otherUser = await User.findById(otherParticipantDoc.user_id);
+            if (otherUser) {
+                // Get profile based on email
+                let profile = null;
+                if (otherUser.role === 'alumni') {
+                    profile = await AlumniProfile.findOne({ email: otherUser.email });
+                } else if (otherUser.role === 'admin') {
+                    profile = await AdminProfile.findOne({ email: otherUser.email });
+                } else if (otherUser.role === 'student') {
+                    profile = await StudentProfile.findOne({ email: otherUser.email });
+                }
 
-            // Get profile based on role
-            let profile = null;
-            if (otherUser.role === 'alumni') {
-                profile = await AlumniProfile.findOne({ email: otherUser.email });
-            } else if (otherUser.role === 'admin') {
-                profile = await AdminProfile.findOne({ email: otherUser.email });
-            } else if (otherUser.role === 'student') {
-                profile = await StudentProfile.findOne({ email: otherUser.email });
+                otherParticipant = {
+                    _id: otherUser._id,
+                    full_name: profile?.full_name || otherUser.email || 'Unknown User',
+                    email: otherUser.email,
+                    role: otherUser.role,
+                    profile_photo_url: profile?.profile_photo_url,
+                    current_position: profile?.current_position,
+                    company: profile?.company
+                };
             }
-
-            otherParticipant = {
-                _id: otherUser._id,
-                full_name: profile?.full_name || otherUser.email,
-                email: otherUser.email,
-                role: otherUser.role,
-                profile_photo_url: profile?.profile_photo_url,
-                current_position: profile?.current_position,
-                company: profile?.company
-            };
         }
 
         // Get messages (exclude globally deleted and those deleted by current user)
@@ -246,33 +250,29 @@ exports.getConversationMessages = async (req, res) => {
             let email = message.sender_email;
             let role = message.sender_role;
             let senderId = message.sender_id;
+            let profile_photo_url = null;
 
-            // Always fetch fresh user details from profile models since stored fields may be empty
+            // Always fetch fresh user details from profile models using sender_id
             if (senderId) {
-                // Try to find the user in profile models by _id
-                let profile = null;
+                // First get the User to find the email
+                const user = await User.findById(senderId);
+                if (user) {
+                    email = user.email;
+                    role = user.role;
 
-                // Check AlumniProfile first
-                profile = await AlumniProfile.findById(senderId);
-                if (profile) {
-                    email = profile.email;
-                    role = 'alumni';
-                    full_name = profile.full_name;
-                } else {
-                    // Check StudentProfile
-                    profile = await StudentProfile.findById(senderId);
+                    // Now find the profile using email
+                    let profile = null;
+                    if (user.role === 'alumni') {
+                        profile = await AlumniProfile.findOne({ email: user.email });
+                    } else if (user.role === 'student') {
+                        profile = await StudentProfile.findOne({ email: user.email });
+                    } else if (user.role === 'admin') {
+                        profile = await AdminProfile.findOne({ email: user.email });
+                    }
+
                     if (profile) {
-                        email = profile.email;
-                        role = 'student';
                         full_name = profile.full_name;
-                    } else {
-                        // Check AdminProfile
-                        profile = await AdminProfile.findById(senderId);
-                        if (profile) {
-                            email = profile.email;
-                            role = 'admin';
-                            full_name = profile.full_name;
-                        }
+                        profile_photo_url = profile.profile_photo_url;
                     }
                 }
             }
@@ -290,7 +290,8 @@ exports.getConversationMessages = async (req, res) => {
                     _id: senderId,
                     email: email,
                     role: role,
-                    full_name
+                    full_name,
+                    profile_photo_url
                 }
             };
         }));
@@ -477,6 +478,7 @@ exports.editMessage = async (req, res) => {
 exports.deleteMessage = async (req, res) => {
     try {
         const { messageId } = req.params;
+        const { deleteType } = req.body; // 'forEveryone' or 'forMe'
         const userId = req.user.id;
         const userObjectId = new mongoose.Types.ObjectId(userId);
 
@@ -486,18 +488,25 @@ exports.deleteMessage = async (req, res) => {
             return res.status(404).json({ message: 'Message not found' });
         }
 
-
-
-        const isOwnMessage = message.sender_id.equals(userObjectId);
+        const isOwnMessage = message.sender_id.toString() === userId;
 
         if (isOwnMessage) {
-            // If it's the user's own message, do global soft delete
-            message.is_deleted = true;
-            message.deleted_at = new Date();
-            await message.save();
-            res.status(200).json({ message: 'Message deleted for everyone' });
+            if (deleteType === 'forMe') {
+                // Delete for self
+                if (!message.deleted_by_users.some(id => id.equals(userObjectId))) {
+                    message.deleted_by_users.push(userObjectId);
+                    await message.save();
+                }
+                res.status(200).json({ message: 'Message deleted for you' });
+            } else {
+                // Global delete
+                message.is_deleted = true;
+                message.deleted_at = new Date();
+                await message.save();
+                res.status(200).json({ message: 'Message deleted for everyone' });
+            }
         } else {
-            // If it's a received message, add user to deleted_by_users array
+            // For received messages, always delete for self
             if (!message.deleted_by_users.some(id => id.equals(userObjectId))) {
                 message.deleted_by_users.push(userObjectId);
                 await message.save();

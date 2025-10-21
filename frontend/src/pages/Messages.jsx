@@ -12,6 +12,8 @@ const Messages = () => {
     const { conversationId } = useParams();
     const navigate = useNavigate();
     const [conversations, setConversations] = useState([]);
+    const [filteredConversations, setFilteredConversations] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
     const [currentConversation, setCurrentConversation] = useState(null);
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
@@ -48,6 +50,7 @@ const Messages = () => {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                 });
                 setConversations(response.data);
+                setFilteredConversations(response.data);
             } catch (error) {
                 console.error('Error fetching conversations:', error);
             }
@@ -58,13 +61,37 @@ const Messages = () => {
         }
     }, [currentUserId]);
 
+    // Filter conversations based on search term
+    useEffect(() => {
+        if (!searchTerm.trim()) {
+            setFilteredConversations(conversations);
+        } else {
+            const filtered = conversations.filter(conversation =>
+                conversation.otherParticipant?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                conversation.lastMessage?.message_text?.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            setFilteredConversations(filtered);
+        }
+    }, [searchTerm, conversations]);
+
     // Fetch messages for current conversation
     useEffect(() => {
         const fetchMessages = async () => {
             if (!conversationId) return;
 
             // Skip if this is a mentorship conversation ID (not a real conversation)
-            if (conversationId.startsWith('mentorship-')) return;
+            if (conversationId.startsWith('mentorship-')) {
+                // For mentorship conversations, set currentConversation from conversations list
+                const mentorshipConv = conversations.find(conv => conv._id === conversationId);
+                if (mentorshipConv) {
+                    setCurrentConversation({
+                        _id: mentorshipConv._id,
+                        title: mentorshipConv.title,
+                        otherParticipant: mentorshipConv.otherParticipant
+                    });
+                }
+                return;
+            }
 
             setLoading(true);
             try {
@@ -89,6 +116,20 @@ const Messages = () => {
 
         fetchMessages();
     }, [conversationId]);
+
+    // Update currentConversation for mentorship conversations when conversations load
+    useEffect(() => {
+        if (conversationId?.startsWith('mentorship-')) {
+            const mentorshipConv = conversations.find(conv => conv._id === conversationId);
+            if (mentorshipConv) {
+                setCurrentConversation({
+                    _id: mentorshipConv._id,
+                    title: mentorshipConv.title,
+                    otherParticipant: mentorshipConv.otherParticipant
+                });
+            }
+        }
+    }, [conversations, conversationId]);
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
@@ -144,8 +185,8 @@ const Messages = () => {
         }
     };
 
-    const handleDeleteMessage = async (messageId, isCurrentUser) => {
-        const confirmMessage = isCurrentUser
+    const handleDeleteMessage = async (messageId, isCurrentUser, deleteType) => {
+        const confirmMessage = deleteType === 'forEveryone'
             ? 'Are you sure you want to delete this message for everyone?'
             : 'Are you sure you want to delete this message for yourself?';
 
@@ -153,16 +194,17 @@ const Messages = () => {
 
         try {
             await axios.delete(`${API_BASE_URL}/api/messages/${messageId}`, {
+                data: { deleteType },
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
 
-            if (isCurrentUser) {
-                // For sent messages, mark as deleted in UI
+            if (deleteType === 'forEveryone') {
+                // For global delete, mark as deleted in UI
                 setMessages(prev => prev.map(msg =>
                     msg._id === messageId ? { ...msg, is_deleted: true } : msg
                 ));
             } else {
-                // For received messages deleted for self, remove from UI
+                // For delete for self, remove from UI
                 setMessages(prev => prev.filter(msg => msg._id !== messageId));
             }
         } catch (error) {
@@ -233,9 +275,16 @@ const Messages = () => {
             <div className="w-1/4 bg-white border-r border-gray-200 flex flex-col">
                 <div className="p-4 border-b border-gray-200">
                     <h2 className="text-xl font-bold text-gray-800">Messages</h2>
+                    <input
+                        type="text"
+                        placeholder="Search conversations..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                 </div>
                 <div className="flex-1 overflow-y-auto">
-                    {conversations.map(conversation => (
+                    {filteredConversations.map(conversation => (
                         <div
                             key={conversation._id}
                             onClick={() => {
@@ -275,7 +324,7 @@ const Messages = () => {
                                                 {conversation.otherParticipant?.full_name}
                                             </p>
                                             <p className="text-sm text-gray-500 truncate">
-                                                {conversation.lastMessage?.message_text || 'No messages yet'}
+                                                {conversation.lastMessage?.message_text || ''}
                                             </p>
                                         </div>
                                         {conversation.unreadCount > 0 && (
@@ -288,7 +337,12 @@ const Messages = () => {
                             </div>
                         </div>
                     ))}
-                    {conversations.length === 0 && (
+                    {filteredConversations.length === 0 && searchTerm && (
+                        <div className="p-8 text-center text-gray-500">
+                            No conversations match your search.
+                        </div>
+                    )}
+                    {filteredConversations.length === 0 && !searchTerm && (
                         <div className="p-8 text-center text-gray-500">
                             No conversations yet. Start messaging with alumni!
                         </div>
@@ -306,15 +360,18 @@ const Messages = () => {
                                 src={currentConversation?.otherParticipant?.profile_photo_url
                                     ? `${API_BASE_URL}${currentConversation.otherParticipant.profile_photo_url}`
                                     : '/default-avatar.png'}
-                                alt={currentConversation?.otherParticipant?.full_name}
+                                alt={currentConversation?.otherParticipant?.full_name || 'Avatar'}
                                 className="w-10 h-10 rounded-full object-cover"
                             />
                             <div>
                                 <h3 className="font-semibold text-gray-900">
-                                    {currentConversation?.otherParticipant?.full_name}
+                                    {currentConversation?.otherParticipant?.full_name || currentConversation?.otherParticipant?.email || 'User'}
                                 </h3>
                                 <p className="text-sm text-gray-500">
-                                    {currentConversation?.otherParticipant?.current_position} at {currentConversation?.otherParticipant?.company}
+                                    {currentConversation?.otherParticipant?.role
+                                        ? currentConversation.otherParticipant.role.charAt(0).toUpperCase() + currentConversation.otherParticipant.role.slice(1)
+                                        : ''
+                                    }
                                 </p>
                             </div>
                         </div>
@@ -343,10 +400,6 @@ const Messages = () => {
                                             className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
                                         >
                                             <div className="flex flex-col">
-                                                {/* Sender Name */}
-                                                <p className={`text-xs mb-1 px-2 ${isCurrentUser ? 'text-right text-gray-600' : 'text-left text-gray-600'}`}>
-                                                    {isCurrentUser ? 'You' : message.sender_name || message.sender_id?.full_name || message.sender_id?.email || 'Unknown User'}
-                                                </p>
                                                 <div
                                                     className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg relative group ${
                                                         isCurrentUser
@@ -471,16 +524,38 @@ const Messages = () => {
                                             Edit
                                         </button>
                                     )}
-                                    <button
-                                        onClick={() => {
-                                            const isCurrentUser = selectedMessage.sender_id?._id === currentUserId;
-                                            handleDeleteMessage(selectedMessage._id, isCurrentUser);
-                                            setShowContextMenu(false);
-                                        }}
-                                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-red-600"
-                                    >
-                                        {selectedMessage.sender_id?._id === currentUserId ? 'Delete for Everyone' : 'Delete for Me'}
-                                    </button>
+                                    {selectedMessage.sender_id?._id === currentUserId ? (
+                                        <>
+                                            <button
+                                                onClick={() => {
+                                                    handleDeleteMessage(selectedMessage._id, true, 'forEveryone');
+                                                    setShowContextMenu(false);
+                                                }}
+                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-red-600"
+                                            >
+                                                Delete for Everyone
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    handleDeleteMessage(selectedMessage._id, true, 'forMe');
+                                                    setShowContextMenu(false);
+                                                }}
+                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-red-600"
+                                            >
+                                                Delete for Me
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <button
+                                            onClick={() => {
+                                                handleDeleteMessage(selectedMessage._id, false, 'forMe');
+                                                setShowContextMenu(false);
+                                            }}
+                                            className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-red-600"
+                                        >
+                                            Delete for Me
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         )}
