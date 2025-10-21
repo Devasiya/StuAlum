@@ -10,6 +10,8 @@ const {
     getConversations,
     getConversationMessages,
     sendMessage,
+    editMessage,
+    deleteMessage,
     createOrGetConversation
 } = require('../controllers/messageController');
 
@@ -36,6 +38,12 @@ router.post('/conversation', createOrGetConversation);
 
 // Send a message
 router.post('/send', sendMessage);
+
+// Edit a message
+router.put('/:messageId', editMessage);
+
+// Delete a message
+router.delete('/:messageId', deleteMessage);
 
 // 🛑 REMOVED DUPLICATE AND ERROR-CAUSING LINES:
 // router.post('/conversation', protect, messageController.createOrGetConversation); // ERROR: protect not defined

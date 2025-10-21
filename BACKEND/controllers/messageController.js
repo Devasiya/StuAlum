@@ -5,11 +5,13 @@ const User = require('../models/User');
 const AlumniProfile = require('../models/AlumniProfile');
 const AdminProfile = require('../models/AdminProfile');
 const StudentProfile = require('../models/StudentProfile');
+const MentorshipRequest = require('../models/MentorshipRequest');
 
 // Get all conversations for the logged-in user
 exports.getConversations = async (req, res) => {
     try {
         const userId = req.user.id;
+        const userRole = req.user.role;
 
         // Find all conversations where the user is a participant
         const participants = await ConversationParticipant.find({ user_id: userId })
@@ -25,24 +27,33 @@ exports.getConversations = async (req, res) => {
                     user_id: { $ne: userId }
                 }).populate('user_id');
 
-                if (!otherParticipantDoc) return null;
+                if (!otherParticipantDoc || !otherParticipantDoc.user_id) return null;
 
                 const otherUser = otherParticipantDoc.user_id;
 
                 // Get profile based on role
                 let profile = null;
                 if (otherUser.role === 'alumni') {
-                    profile = await AlumniProfile.findOne({ user_id: otherUser._id });
+                    profile = await AlumniProfile.findOne({ email: otherUser.email });
                 } else if (otherUser.role === 'admin') {
-                    profile = await AdminProfile.findOne({ user_id: otherUser._id });
+                    profile = await AdminProfile.findOne({ email: otherUser.email });
                 } else if (otherUser.role === 'student') {
-                    profile = await StudentProfile.findOne({ user_id: otherUser._id });
+                    profile = await StudentProfile.findOne({ email: otherUser.email });
                 }
 
                 // Get last message
                 const lastMessage = await Message.findOne({ conversation_id: conversation._id })
                     .sort({ sent_at: -1 })
                     .populate('sender_id', 'full_name');
+
+                // Count unread messages for this conversation
+                const unreadCount = await Message.countDocuments({
+                    conversation_id: conversation._id,
+                    sender_id: { $ne: userId },
+                    is_read: false,
+                    is_deleted: false,
+                    deleted_by_users: { $ne: userId }
+                });
 
                 return {
                     _id: conversation._id,
@@ -61,14 +72,98 @@ exports.getConversations = async (req, res) => {
                         sent_at: lastMessage.sent_at,
                         sender_id: lastMessage.sender_id
                     } : null,
+                    unreadCount,
                     created_at: conversation.created_at
                 };
             })
         );
 
+        // Get mentorship-related conversations
+        let mentorshipConversations = [];
+        if (userRole === 'student') {
+            // For students: get conversations with accepted mentors
+            const acceptedRequests = await MentorshipRequest.find({
+                mentee_id: userId,
+                status: 'accepted'
+            }).populate('mentor_id');
+
+            mentorshipConversations = await Promise.all(
+                acceptedRequests.map(async (request) => {
+                    const mentor = request.mentor_id;
+                    const mentorProfile = await AlumniProfile.findOne({ email: mentor.email });
+
+                    // Check if conversation already exists
+                    const existingConv = conversationsWithDetails.find(conv =>
+                        conv?.otherParticipant._id.toString() === mentor._id.toString()
+                    );
+
+                    if (existingConv) return null; // Skip if already in regular conversations
+
+                    // Create a pseudo-conversation for mentorship
+                    return {
+                        _id: `mentorship-${mentor._id}`,
+                        title: 'Mentorship Conversation',
+                        otherParticipant: {
+                            _id: mentor._id,
+                            full_name: mentorProfile?.full_name || mentor.email,
+                            email: mentor.email,
+                            role: 'alumni',
+                            profile_photo_url: mentorProfile?.profile_photo_url,
+                            current_position: mentorProfile?.current_position,
+                            company: mentorProfile?.company
+                        },
+                        lastMessage: null,
+                        unreadCount: 0,
+                        created_at: request.created_at,
+                        isMentorship: true
+                    };
+                })
+            );
+        } else if (userRole === 'alumni') {
+            // For alumni: get conversations with accepted mentees
+            const acceptedRequests = await MentorshipRequest.find({
+                mentor_id: userId,
+                status: 'accepted'
+            }).populate('mentee_id');
+
+            mentorshipConversations = await Promise.all(
+                acceptedRequests.map(async (request) => {
+                    const mentee = request.mentee_id;
+                    const menteeProfile = await StudentProfile.findOne({ email: mentee.email });
+
+                    // Check if conversation already exists
+                    const existingConv = conversationsWithDetails.find(conv =>
+                        conv?.otherParticipant._id.toString() === mentee._id.toString()
+                    );
+
+                    if (existingConv) return null; // Skip if already in regular conversations
+
+                    // Create a pseudo-conversation for mentorship
+                    return {
+                        _id: `mentorship-${mentee._id}`,
+                        title: 'Mentorship Conversation',
+                        otherParticipant: {
+                            _id: mentee._id,
+                            full_name: menteeProfile?.full_name || mentee.email,
+                            email: mentee.email,
+                            role: 'student',
+                            profile_photo_url: menteeProfile?.profile_photo_url,
+                            current_position: null,
+                            company: null
+                        },
+                        lastMessage: null,
+                        unreadCount: 0,
+                        created_at: request.created_at,
+                        isMentorship: true
+                    };
+                })
+            );
+        }
+
         // Filter out null conversations and sort by last message time
         const validConversations = conversationsWithDetails
             .filter(conv => conv !== null)
+            .concat(mentorshipConversations.filter(conv => conv !== null))
             .sort((a, b) => {
                 if (!a.lastMessage && !b.lastMessage) return 0;
                 if (!a.lastMessage) return 1;
@@ -112,17 +207,17 @@ exports.getConversationMessages = async (req, res) => {
         }).populate('user_id');
 
         let otherParticipant = null;
-        if (otherParticipantDoc) {
+        if (otherParticipantDoc && otherParticipantDoc.user_id) {
             const otherUser = otherParticipantDoc.user_id;
 
             // Get profile based on role
             let profile = null;
             if (otherUser.role === 'alumni') {
-                profile = await AlumniProfile.findOne({ user_id: otherUser._id });
+                profile = await AlumniProfile.findOne({ email: otherUser.email });
             } else if (otherUser.role === 'admin') {
-                profile = await AdminProfile.findOne({ user_id: otherUser._id });
+                profile = await AdminProfile.findOne({ email: otherUser.email });
             } else if (otherUser.role === 'student') {
-                profile = await StudentProfile.findOne({ user_id: otherUser._id });
+                profile = await StudentProfile.findOne({ email: otherUser.email });
             }
 
             otherParticipant = {
@@ -136,10 +231,85 @@ exports.getConversationMessages = async (req, res) => {
             };
         }
 
-        // Get messages
-        const messages = await Message.find({ conversation_id: conversationId })
-            .populate('sender_id', 'full_name email')
+        // Get messages (exclude globally deleted and those deleted by current user)
+        const messagesRaw = await Message.find({
+            conversation_id: conversationId,
+            is_deleted: false,
+            deleted_by_users: { $ne: userId }
+        })
             .sort({ sent_at: 1 });
+
+        // Populate sender details
+        const messages = await Promise.all(messagesRaw.map(async message => {
+            let full_name = message.sender_name;
+            let email = message.sender_email;
+            let role = message.sender_role;
+            let senderId = message.sender_id;
+
+            // Always fetch fresh user details from profile models since stored fields may be empty
+            if (senderId) {
+                // Try to find the user in profile models by _id
+                let profile = null;
+
+                // Check AlumniProfile first
+                profile = await AlumniProfile.findById(senderId);
+                if (profile) {
+                    email = profile.email;
+                    role = 'alumni';
+                    full_name = profile.full_name;
+                } else {
+                    // Check StudentProfile
+                    profile = await StudentProfile.findById(senderId);
+                    if (profile) {
+                        email = profile.email;
+                        role = 'student';
+                        full_name = profile.full_name;
+                    } else {
+                        // Check AdminProfile
+                        profile = await AdminProfile.findById(senderId);
+                        if (profile) {
+                            email = profile.email;
+                            role = 'admin';
+                            full_name = profile.full_name;
+                        }
+                    }
+                }
+            }
+
+            if (!full_name) {
+                full_name = email || 'Unknown User';
+            }
+
+            const messageObj = message.toObject();
+            messageObj.sender_name = full_name; // Ensure sender_name is set in response
+
+            return {
+                ...messageObj,
+                sender_id: {
+                    _id: senderId,
+                    email: email,
+                    role: role,
+                    full_name
+                }
+            };
+        }));
+
+        console.log('Messages with populated sender_id:', messages.map(msg => ({
+            _id: msg._id,
+            message_text: msg.message_text,
+            sender_id: msg.sender_id
+        })));
+
+        // Mark messages from other participant as read
+        await Message.updateMany(
+            {
+                conversation_id: conversationId,
+                sender_id: { $ne: userId },
+                is_read: false,
+                is_deleted: false
+            },
+            { is_read: true }
+        );
 
         res.status(200).json({
             conversation: {
@@ -175,22 +345,132 @@ exports.sendMessage = async (req, res) => {
             return res.status(403).json({ message: 'Access denied to this conversation' });
         }
 
+        // Get sender details from req.user (already authenticated)
+        const senderEmail = req.user.email;
+        const senderRole = req.user.role;
+
+        let senderName = senderEmail; // fallback
+
+        if (senderRole === 'alumni') {
+            const profile = await AlumniProfile.findOne({ email: senderEmail });
+            if (profile?.full_name) senderName = profile.full_name;
+        } else if (senderRole === 'admin') {
+            const profile = await AdminProfile.findOne({ email: senderEmail });
+            if (profile?.full_name) senderName = profile.full_name;
+        } else if (senderRole === 'student') {
+            const profile = await StudentProfile.findOne({ email: senderEmail });
+            if (profile?.full_name) senderName = profile.full_name;
+        }
+
         // Create and save message
         const newMessage = new Message({
             conversation_id,
             sender_id: senderId,
+            sender_email: senderEmail,
+            sender_role: senderRole,
+            sender_name: senderName,
             message_text: message_text.trim()
         });
 
         await newMessage.save();
 
-        // Populate sender info for response
-        await newMessage.populate('sender_id', 'full_name email');
+        // Use the sender details already fetched
+        const responseMessage = {
+            ...newMessage.toObject(),
+            sender_id: {
+                _id: senderId,
+                email: senderEmail,
+                role: senderRole,
+                full_name: senderName
+            }
+        };
 
-        res.status(201).json(newMessage);
+        res.status(201).json(responseMessage);
     } catch (error) {
         console.error('Error sending message:', error);
         res.status(500).json({ message: 'Server error while sending message' });
+    }
+};
+
+// Edit a message
+exports.editMessage = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const { message_text } = req.body;
+        const userId = req.user.id;
+
+        if (!message_text || !message_text.trim()) {
+            return res.status(400).json({ message: 'Message text is required' });
+        }
+
+        // Find the message and verify ownership
+        const message = await Message.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ message: 'Message not found' });
+        }
+
+        if (message.sender_id.toString() !== userId) {
+            return res.status(403).json({ message: 'You can only edit your own messages' });
+        }
+
+        if (message.is_deleted) {
+            return res.status(400).json({ message: 'Cannot edit deleted message' });
+        }
+
+        // Update the message
+        message.message_text = message_text.trim();
+        message.edited_at = new Date();
+        await message.save();
+
+        // Use the sender details stored in the message
+        const responseMessage = {
+            ...message.toObject(),
+            sender_id: {
+                _id: message.sender_id._id,
+                email: message.sender_email,
+                role: message.sender_role,
+                full_name: message.sender_name
+            }
+        };
+
+        res.status(200).json(responseMessage);
+    } catch (error) {
+        console.error('Error editing message:', error);
+        res.status(500).json({ message: 'Server error while editing message' });
+    }
+};
+
+// Delete a message
+exports.deleteMessage = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.user.id;
+
+        // Find the message
+        const message = await Message.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ message: 'Message not found' });
+        }
+
+        const isOwnMessage = message.sender_id.toString() === userId;
+
+        if (isOwnMessage) {
+            // If it's the user's own message, do global soft delete
+            message.is_deleted = true;
+            message.deleted_at = new Date();
+            await message.save();
+            res.status(200).json({ message: 'Message deleted for everyone' });
+        } else {
+            // If it's a received message, add user to deleted_by_users array
+            if (!message.deleted_by_users.includes(userId)) {
+                message.deleted_by_users.push(userId);
+                await message.save();
+            }
+            res.status(200).json({ message: 'Message deleted for you' });
+        }
+    } catch (error) {
+        console.error('Error deleting message:', error);
+        res.status(500).json({ message: 'Server error while deleting message' });
     }
 };
 
