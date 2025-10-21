@@ -389,19 +389,9 @@ const Messages = () => {
                                                                         <div
                                                                             className="relative"
                                                                             onMouseEnter={(e) => {
-                                                                                // Clear any existing timeout
-                                                                                if (menuTimeout) {
-                                                                                    clearTimeout(menuTimeout);
-                                                                                    setMenuTimeout(null);
-                                                                                }
                                                                                 setSelectedMessage(message);
                                                                                 setContextMenuPosition({ x: e.clientX, y: e.clientY });
                                                                                 setShowContextMenu(true);
-                                                                            }}
-                                                                            onMouseLeave={() => {
-                                                                                // Delay hiding to allow moving to menu
-                                                                                const timeout = setTimeout(() => setShowContextMenu(false), 200);
-                                                                                setMenuTimeout(timeout);
                                                                             }}
                                                                         >
                                                                             <span className="text-xs text-gray-400 cursor-pointer hover:text-gray-600">
@@ -437,7 +427,6 @@ const Messages = () => {
                                         clearTimeout(menuTimeout);
                                         setMenuTimeout(null);
                                     }
-                                    setShowContextMenu(true);
                                 }}
                                 onMouseLeave={() => {
                                     // Delay hiding when leaving menu
