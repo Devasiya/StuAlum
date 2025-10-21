@@ -12,13 +12,11 @@ const messageSchema = new mongoose.Schema({
         required: true
     },
     sender_email: {
-        type: String,
-        required: true
+        type: String
     },
     sender_role: {
         type: String,
-        enum: ['student', 'alumni', 'admin'],
-        required: true
+        enum: ['student', 'alumni', 'admin']
     },
     sender_name: {
         type: String,

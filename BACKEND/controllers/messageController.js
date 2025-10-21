@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Conversation = require('../models/Conservation');
 const ConversationParticipant = require('../models/ConversationParticipant');
 const Message = require('../models/Message');
@@ -346,8 +347,22 @@ exports.sendMessage = async (req, res) => {
         }
 
         // Get sender details from req.user (already authenticated)
-        const senderEmail = req.user.email;
+        let senderEmail = req.user.email;
         const senderRole = req.user.role;
+
+        // If email not in token (old tokens), fetch from profile
+        if (!senderEmail) {
+            if (senderRole === 'alumni') {
+                const profile = await AlumniProfile.findById(req.user.id);
+                senderEmail = profile?.email || '';
+            } else if (senderRole === 'student') {
+                const profile = await StudentProfile.findById(req.user.id);
+                senderEmail = profile?.email || '';
+            } else if (senderRole === 'admin') {
+                const profile = await AdminProfile.findById(req.user.id);
+                senderEmail = profile?.email || '';
+            }
+        }
 
         let senderName = senderEmail; // fallback
 
@@ -417,17 +432,35 @@ exports.editMessage = async (req, res) => {
             return res.status(400).json({ message: 'Cannot edit deleted message' });
         }
 
+
+
         // Update the message
         message.message_text = message_text.trim();
         message.edited_at = new Date();
         await message.save();
 
+        // Ensure sender email is available (fallback for old messages)
+        let senderEmail = message.sender_email;
+        if (!senderEmail) {
+            const senderRole = message.sender_role;
+            if (senderRole === 'alumni') {
+                const profile = await AlumniProfile.findById(message.sender_id);
+                senderEmail = profile?.email || '';
+            } else if (senderRole === 'student') {
+                const profile = await StudentProfile.findById(message.sender_id);
+                senderEmail = profile?.email || '';
+            } else if (senderRole === 'admin') {
+                const profile = await AdminProfile.findById(message.sender_id);
+                senderEmail = profile?.email || '';
+            }
+        }
+
         // Use the sender details stored in the message
         const responseMessage = {
             ...message.toObject(),
             sender_id: {
-                _id: message.sender_id._id,
-                email: message.sender_email,
+                _id: message.sender_id,
+                email: senderEmail,
                 role: message.sender_role,
                 full_name: message.sender_name
             }
@@ -445,6 +478,7 @@ exports.deleteMessage = async (req, res) => {
     try {
         const { messageId } = req.params;
         const userId = req.user.id;
+        const userObjectId = new mongoose.Types.ObjectId(userId);
 
         // Find the message
         const message = await Message.findById(messageId);
@@ -452,7 +486,9 @@ exports.deleteMessage = async (req, res) => {
             return res.status(404).json({ message: 'Message not found' });
         }
 
-        const isOwnMessage = message.sender_id.toString() === userId;
+
+
+        const isOwnMessage = message.sender_id.equals(userObjectId);
 
         if (isOwnMessage) {
             // If it's the user's own message, do global soft delete
@@ -462,8 +498,8 @@ exports.deleteMessage = async (req, res) => {
             res.status(200).json({ message: 'Message deleted for everyone' });
         } else {
             // If it's a received message, add user to deleted_by_users array
-            if (!message.deleted_by_users.includes(userId)) {
-                message.deleted_by_users.push(userId);
+            if (!message.deleted_by_users.some(id => id.equals(userObjectId))) {
+                message.deleted_by_users.push(userObjectId);
                 await message.save();
             }
             res.status(200).json({ message: 'Message deleted for you' });
