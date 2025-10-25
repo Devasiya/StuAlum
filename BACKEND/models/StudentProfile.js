@@ -11,6 +11,7 @@ const StudentProfileSchema = new mongoose.Schema({
   contact_number: { type: String },
   address: { type: String },
   skills: [String],
+  interests: [String],
   career_goals: { type: String },
   discovery_insights: { type: String },
   preferences: { type: String },
@@ -18,11 +19,22 @@ const StudentProfileSchema = new mongoose.Schema({
   profile_photo_url: { type: String },
   current_position: { type: String },
   company: { type: String },
-  verficationFile: { type: String },
+  verificationFile: { type: String },
   linkedin: { type: String },
   github: { type: String },
   extracurricular: { type: String },
   is_verified: { type: Boolean, default: false },
+  notifications: {
+    mentorship: { type: Boolean, default: true },
+    events: { type: Boolean, default: true },
+    community: { type: Boolean, default: false },
+    content: { type: Boolean, default: true },
+  },
+  mentorship_area: { type: String },
+  mentor_type: { type: String },
+  communication: [String],
+  hear_about: { type: String },
+  projects: [Object],
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 
 module.exports = mongoose.model('StudentProfile', StudentProfileSchema);
