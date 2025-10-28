@@ -54,7 +54,11 @@ const startServer = async () => {
           console.log(`Incoming ${req.method} ${req.url}`);
           next();
         });
+         //AI Routes Text generation and grammar checker
+        app.use('/api/text', require('./routes/aitextgeneratorRoutes'));
+        app.use('/api/grammar', require('./routes/grammarRoutes'));
 
+        
         // Routes
         app.use('/api/alumni', require('./routes/alumniRoutes'));
         app.use('/api/student', require('./routes/studentRoutes'));
@@ -68,6 +72,9 @@ const startServer = async () => {
 
         // MENTORSHIP ROUTER
         app.use('/api/mentorship', require('./routes/mentorshipRoutes'));
+
+        //contact route
+        app.use("/api/contact",require("./routes/contactRoutes"));
 
         // Root Route
         app.get('/', (req, res) => res.send('Hello World!'));

@@ -6,6 +6,7 @@ const eventController = require('../controllers/eventController');
 const auth = require('../middleware/auth'); 
 const { checkRole } = require('../middleware/checkRole'); 
 
+
 const ALL_USERS = ['student', 'alumni', 'admin']; // All can view/register
 const ADMIN_ONLY = ['admin'];
 
@@ -19,5 +20,12 @@ router.post('/', auth, checkRole(ADMIN_ONLY), eventController.createEvent);
 router.post('/:eventId/register', auth, checkRole(ALL_USERS), eventController.registerForEvent);
 // BACKEND/routes/eventRoutes.js
 router.delete('/:eventId', auth, checkRole(ADMIN_ONLY), eventController.deleteEvent);
+
+//ai
+const { generateEventPlan } = require("../controllers/eventController");
+router.post("/generate", generateEventPlan);
+
+router.post("/publish", auth, checkRole(['admin']), eventController.publishEvent);
+
 
 module.exports = router;

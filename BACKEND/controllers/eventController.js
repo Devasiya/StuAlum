@@ -193,3 +193,145 @@ exports.deleteEvent = async (req, res) => {
         res.status(500).json({ message: 'Failed to delete event.' });
     }
 };
+
+
+
+//ai 
+
+const {getGeminiEventPlan}=require("../utils/gemini");
+
+exports.generateEventPlan = async (req, res) => {
+  try {
+    console.log("📩 Incoming request body:", req.body);
+
+    const {
+      title, category, startTime, endTime, capacity,
+      audience, mode, location, description,status
+    } = req.body;
+
+    if (!title || !location || !startTime || !endTime || !mode) {
+      console.warn("⚠️ Missing title or location");
+      return res.status(400).json({ error: "Event name and location are required." });
+    }
+
+    const prompt = `
+Generate a detailed, professional event plan for the following:
+
+**Title:** ${title}
+**Category:** ${category}
+**Date & Time:** ${startTime} to ${endTime}
+**Target Audience:** ${audience}
+**Mode:** ${mode}
+**Location:** ${location}
+**Capacity:** ${capacity}
+**Description:** ${description}
+**Status:** ${status}
+
+Please format the output as a **well-structured Markdown document** with:
+- Headings (##)
+- Bullet points
+- Bold for section titles
+- Proper spacing
+
+Include:
+- Venue Suggestions
+- Timeline of Activities
+- Catering Recommendations
+- Decoration Ideas
+- Entertainment Options
+- Logistics & Setup
+- Budget Estimation (in INR)
+- Additional Recommendations
+
+Make it look creative, elegant, and easy to read.
+`;
+
+    console.log("🧠 Sending prompt to Gemini...");
+
+    const plan = await getGeminiEventPlan(prompt);
+    console.log("✅ Gemini responded successfully!");
+
+    // return res.status(200).json({ success: true, plan });
+    res.json({ success: true, plan });
+  } catch (err) {
+    console.error("❌ ERROR in generateEventPlan:", err);
+     return res.status(500).json({ error: "Failed to generate event plan." });
+  }
+};
+
+
+
+// ✅ Publish event (AI-generated event plan)
+// exports.publishEvent = async (req, res) => {
+//   try {
+//     const { title, location, output } = req.body;
+
+//     if (!title || !location || !output) {
+//       return res.status(400).json({ error: "Title, location, and event plan are required." });
+//     }
+
+//     // 🔹 Create an event entry in your Event model
+//     const newEvent = await Event.create({
+//       title,
+//       location,
+//       description: output, // Store the AI-generated plan
+//       status: "Published",
+//       createdAt: new Date(),
+//     });
+
+//     res.status(201).json({
+//       success: true,
+//       message: "Event published successfully!",
+//       event: newEvent,
+//     });
+//   } catch (err) {
+//     console.error("❌ Error publishing event:", err);
+//     res.status(500).json({ error: "Failed to publish event" });
+//   }
+// };
+
+
+exports.publishEvent = async (req, res) => {
+  try {
+    const { eventId, title, location, output } = req.body;
+
+    if (!title || !location || !output) {
+      return res.status(400).json({
+        error: "Title, location, and generated event plan are required.",
+      });
+    }
+
+    let event;
+    if (eventId) {
+      // 🔹 Update existing event
+      event = await Event.findByIdAndUpdate(
+        eventId,
+        {
+          title,
+          location,
+          description: output,
+          status: "Published",
+        },
+        { new: true }
+      );
+    } else {
+      // 🔹 Create new event if no ID provided
+      event = await Event.create({
+        title,
+        location,
+        description: output,
+        status: "Published",
+        createdAt: new Date(),
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "✅ Event published successfully!",
+      event,
+    });
+  } catch (error) {
+    console.error("❌ Error publishing event:", error);
+    res.status(500).json({ error: "Failed to publish event" });
+  }
+};
