@@ -47,6 +47,13 @@ const EventSchema = new mongoose.Schema({
         type: String,
         enum: ['StudentProfile', 'AlumniProfile', 'AdminProfile'], 
     },
+
+    //for adding ai one one attributes
+    type: {
+      type: String,
+      enum: ["manual", "ai"],
+      default: "manual", // 🟢 Manual by default
+    },
     
     // Simple counter for quick display/capacity check
     registered_count: { type: Number, default: 0 },
