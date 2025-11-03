@@ -54,7 +54,11 @@ const startServer = async () => {
           console.log(`Incoming ${req.method} ${req.url}`);
           next();
         });
+         //AI Routes Text generation and grammar checker
+        app.use('/api/text', require('./routes/aitextgeneratorRoutes'));
+        app.use('/api/grammar', require('./routes/grammarRoutes'));
 
+        
         // Routes
         app.use('/api/alumni', require('./routes/alumniRoutes'));
         app.use('/api/student', require('./routes/studentRoutes'));
@@ -62,6 +66,8 @@ const startServer = async () => {
         app.use('/api/forums', require('./routes/forumRoutes'));
         app.use('/api/events', require('./routes/eventRoutes'));
         app.use('/api/career', require('./routes/careerRoutes'));
+        // Auth/User route
+        app.use("/api/auth", require("./routes/authRoutes"));
 
         // MESSAGES ROUTER
         app.use('/api/messages', require('./routes/messageRoutes'));
@@ -69,6 +75,11 @@ const startServer = async () => {
         // MENTORSHIP ROUTER
         app.use('/api/mentorship', require('./routes/mentorshipRoutes'));
 
+        //contact route
+        app.use("/api/contact",require("./routes/contactRoutes"));
+
+        //Badge & point stystem routes
+        app.use('/api/points', require('./routes/pointsRoutes'));
         // Root Route
         app.get('/', (req, res) => res.send('Hello World!'));
 

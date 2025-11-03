@@ -27,6 +27,12 @@ import StudentDirectory from './pages/StudentDirectory';
 import StudentProfilePage from './pages/StudentProfilePage';
 import Messages from './pages/Messages';
 import MentorshipDashboard from './pages/MentorshipDashboard';
+import AiToolsDashboard from './pages/AiTools/AiToolsDashboard';
+import TextGenerator from './pages/AiTools/TextGenerator';
+import GrammarChecker from './pages/AiTools/GrammarChecker';
+import AiEventGenerater from './pages/AiTools/AiEventGenerater';
+import HelpSupportPage from './pages/HelpSupportPage';
+import PointsPage from './pages/PointsPage';
 
 // 🚨 FIX 1: Import base component (renamed to avoid conflict with the layout constant)
 import CareerGuidanceComponent from './pages/Career/CareerGuidance';
@@ -51,6 +57,12 @@ const LayoutStudentDirectory = withSidebarToggle(StudentDirectory);
 const LayoutStudentProfilePage = withSidebarToggle(StudentProfilePage);
 const LayoutMessages = withSidebarToggle(Messages);
 const LayoutMentorshipDashboard = withSidebarToggle(MentorshipDashboard);
+const LayoutAiToolsDashboard = withSidebarToggle(AiToolsDashboard);
+const LayoutTextGen = withSidebarToggle(TextGenerator);
+const LayoutGrammar = withSidebarToggle(GrammarChecker);
+const LayoutAiEventGeneratot= withSidebarToggle(AiEventGenerater);
+const LayoutHelpSupport = withSidebarToggle(HelpSupportPage);
+const LayoutPointsPage = withSidebarToggle(PointsPage);
 
 // 🚨 FIX 3: Correctly wrap the imported Career Guidance component
 const LayoutCareer = withSidebarToggle(CareerGuidanceComponent);
@@ -86,12 +98,26 @@ const App = () => {
                 <Route path="/student-directory" element={<LayoutStudentDirectory />} />
                 <Route path="/student/profile/:id" element={<LayoutStudentProfilePage />} />
 
+                
+
                 {/* MESSAGES ROUTES */}
                 <Route path="/messages" element={<LayoutMessages />} />
                 <Route path="/messages/:conversationId" element={<LayoutMessages />} />
 
                 {/* MENTORSHIP ROUTE */}
                 <Route path="/mentorship" element={<LayoutMentorshipDashboard />} />
+
+                {/* Ai Tools Route */}
+                <Route path="/ai-tools" element={<LayoutAiToolsDashboard />} />
+                <Route path="/aitools/text-generator" element={<LayoutTextGen />} />
+                <Route path="/aitools/grammar-checker" element={<LayoutGrammar />} />
+                <Route path="/aitools/AiEventGenerator" element={<LayoutAiEventGeneratot />} />
+
+                {/* HELP & SUPPORT ROUTE */}
+                <Route path="/help-support" element={<LayoutHelpSupport />} />
+
+                {/* POINTS & BADGES ROUTE */}
+                <Route path="/badges-points" element={<LayoutPointsPage />} />
 
                 {/* 🚨 CAREER ROUTES */}
                 <Route path="/career-guidance" element={<LayoutCareer />} />
