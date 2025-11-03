@@ -20,4 +20,11 @@ router.post('/:eventId/register', auth, checkRole(ALL_USERS), eventController.re
 // BACKEND/routes/eventRoutes.js
 router.delete('/:eventId', auth, checkRole(ADMIN_ONLY), eventController.deleteEvent);
 
+//ai
+const { generateEventPlan } = require("../controllers/eventController");
+router.post("/generate", generateEventPlan);
+
+router.post("/publish", auth, checkRole(['admin']), eventController.publishEvent);
+
+
 module.exports = router;
