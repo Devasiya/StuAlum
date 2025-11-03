@@ -35,6 +35,19 @@ const StudentProfileSchema = new mongoose.Schema({
   communication: [String],
   hear_about: { type: String },
   projects: [Object],
-}, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
+  // Gamification fields
+  points: { type: Number, default: 0 },
+  badges: [
+    {
+      name: String,
+      icon: String,
+      description: String,
+      dateEarned: { type: Date, default: Date.now },
+    },
+  ],
+  //end part of gamification
+}, 
+
+{ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 
 module.exports = mongoose.model('StudentProfile', StudentProfileSchema);

@@ -66,6 +66,8 @@ const startServer = async () => {
         app.use('/api/forums', require('./routes/forumRoutes'));
         app.use('/api/events', require('./routes/eventRoutes'));
         app.use('/api/career', require('./routes/careerRoutes'));
+        // Auth/User route
+        app.use("/api/auth", require("./routes/authRoutes"));
 
         // MESSAGES ROUTER
         app.use('/api/messages', require('./routes/messageRoutes'));
@@ -76,6 +78,8 @@ const startServer = async () => {
         //contact route
         app.use("/api/contact",require("./routes/contactRoutes"));
 
+        //Badge & point stystem routes
+        app.use('/api/points', require('./routes/pointsRoutes'));
         // Root Route
         app.get('/', (req, res) => res.send('Hello World!'));
 
