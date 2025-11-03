@@ -6,7 +6,6 @@ const eventController = require('../controllers/eventController');
 const auth = require('../middleware/auth'); 
 const { checkRole } = require('../middleware/checkRole'); 
 
-
 const ALL_USERS = ['student', 'alumni', 'admin']; // All can view/register
 const ADMIN_ONLY = ['admin'];
 

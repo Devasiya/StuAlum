@@ -1,5 +1,6 @@
 const Event = require('../models/Event');
 const mongoose = require('mongoose');
+const { addPoints } = require("../utils/pointsService");
 
 // Helper function to determine the Mongoose model name based on role
 const getProfileType = (role) => {
@@ -112,6 +113,11 @@ exports.createEvent = async (req, res) => {
             creator_model_type
         });
 
+       if (role !== "admin") {
+            const pointsToAdd = 50; // you can adjust based on event importance
+            await addPoints(created_by, role, pointsToAdd);
+            console.log(`🏆 ${role} ${created_by} earned ${pointsToAdd} points for creating an event.`);
+        }
         await newEvent.save();
         res.status(201).json({ message: 'Event created successfully.', event: newEvent });
 
@@ -162,6 +168,17 @@ exports.registerForEvent = async (req, res) => {
                 $inc: { registered_count: 1 }
             }
         ).exec();
+
+         if (role !== "admin") {
+            // Optional: category-based reward
+            const basePoints = 10;
+            const categoryBonus = event.category?.toLowerCase() === "hackathon" ? 10 : 0;
+            const totalPoints = basePoints + categoryBonus;
+
+            await addPoints(userId, role, totalPoints);
+
+            console.log(`🎉 ${role} (${userId}) earned ${totalPoints} points for registering for "${event.title}".`);
+        }
 
         res.json({ message: 'Successfully registered for the event.', eventId });
 

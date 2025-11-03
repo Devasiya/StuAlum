@@ -32,6 +32,7 @@ import TextGenerator from './pages/AiTools/TextGenerator';
 import GrammarChecker from './pages/AiTools/GrammarChecker';
 import AiEventGenerater from './pages/AiTools/AiEventGenerater';
 import HelpSupportPage from './pages/HelpSupportPage';
+import PointsPage from './pages/PointsPage';
 
 // 🚨 FIX 1: Import base component (renamed to avoid conflict with the layout constant)
 import CareerGuidanceComponent from './pages/Career/CareerGuidance';
@@ -61,6 +62,7 @@ const LayoutTextGen = withSidebarToggle(TextGenerator);
 const LayoutGrammar = withSidebarToggle(GrammarChecker);
 const LayoutAiEventGeneratot= withSidebarToggle(AiEventGenerater);
 const LayoutHelpSupport = withSidebarToggle(HelpSupportPage);
+const LayoutPointsPage = withSidebarToggle(PointsPage);
 
 // 🚨 FIX 3: Correctly wrap the imported Career Guidance component
 const LayoutCareer = withSidebarToggle(CareerGuidanceComponent);
@@ -113,6 +115,9 @@ const App = () => {
 
                 {/* HELP & SUPPORT ROUTE */}
                 <Route path="/help-support" element={<LayoutHelpSupport />} />
+
+                {/* POINTS & BADGES ROUTE */}
+                <Route path="/badges-points" element={<LayoutPointsPage />} />
 
                 {/* 🚨 CAREER ROUTES */}
                 <Route path="/career-guidance" element={<LayoutCareer />} />
