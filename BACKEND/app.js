@@ -12,6 +12,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+
 // Function to initialize and start the server
 const startServer = async () => {
     try {
@@ -77,6 +78,9 @@ const startServer = async () => {
 
         //contact route
         app.use("/api/contact",require("./routes/contactRoutes"));
+
+        //ai recommendation route
+        app.use("/api/recommendations",require("./routes/recommendationRoutes"));
 
         //Badge & point stystem routes
         app.use('/api/points', require('./routes/pointsRoutes'));
