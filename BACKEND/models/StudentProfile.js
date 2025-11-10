@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const { createEmbedding } = require("../utils/aiService.js");
+
 
 const StudentProfileSchema = new mongoose.Schema({
   full_name: { type: String, required: true },
@@ -46,8 +48,59 @@ const StudentProfileSchema = new mongoose.Schema({
     },
   ],
   //end part of gamification
+  embedding: { type: [Number], default: [] },
 }, 
 
 { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
+
+// ✅ Generate embedding for new or modified students
+StudentProfileSchema.pre("save", async function (next) {
+  if (
+    !this.isModified("skills") &&
+    !this.isModified("career_goals") &&
+    !this.isModified("mentorship_area") &&
+    this.embedding.length
+  ) {
+    return next();
+  }
+
+  const text = `
+    Name: ${this.full_name}
+    Branch: ${this.branch}
+    Skills: ${(this.skills || []).join(", ")}
+    Career Goal: ${this.career_goals}
+    Mentorship Area: ${this.mentorship_area}
+  `;
+
+  console.log(`🧠 Generating embedding for student: ${this.full_name}`);
+  try {
+    this.embedding = await createEmbedding(text);
+  } catch (err) {
+    console.error("❌ Failed to generate student embedding:", err);
+  }
+  next();
+});
+
+// ✅ Re-generate embedding after updates
+StudentProfileSchema.post("findOneAndUpdate", async function (doc) {
+  if (!doc) return;
+  const updatedFields = this.getUpdate()?.$set || {};
+  const changed = ["skills", "career_goals", "mentorship_area"].some(f => f in updatedFields);
+
+  if (changed) {
+    console.log(`🧠 Re-embedding updated student: ${doc.full_name}`);
+    doc.embedding = await createEmbedding(`
+      Name: ${doc.full_name}
+      Branch: ${doc.branch}
+      Skills: ${(doc.skills || []).join(", ")}
+      Career Goal: ${doc.career_goals}
+      Mentorship Area: ${doc.mentorship_area}
+    `);
+    await doc.save();
+  }
+});
+
+//end
+
 
 module.exports = mongoose.model('StudentProfile', StudentProfileSchema);
