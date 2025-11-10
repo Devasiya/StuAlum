@@ -2,6 +2,8 @@ const bcrypt = require('bcryptjs');
 const StudentProfile = require('../models/StudentProfile');
 const jwt = require('jsonwebtoken');
 
+const JWT_SECRET = process.env.JWT_SECRET || 'THIS_IS_MY_VERY_STRONG_AND_UNIQUE_SECRET_FOR_STUALUM';
+
 exports.registerStudent = async (req, res) => {
   try {
     const data = req.body;
@@ -15,6 +17,11 @@ exports.registerStudent = async (req, res) => {
       }
     }
 
+    // Prevent duplicate registration
+    const existing = await StudentProfile.findOne({ email: data.email });
+    if (existing) return res.status(400).json({ message: 'Email already registered' });
+
+    //end of adding new line to Prevent duplicate registration later remove these above two lines if get error
     ['skills', 'interests', 'communication', 'projects'].forEach(field => {
       if (data[field]) {
         if (typeof data[field] === 'string') {
@@ -188,3 +195,28 @@ exports.getStudentProfileById = async (req, res) => {
     res.status(500).json({ message: 'Server error while fetching profile' });
   }
 };
+
+
+// --- Get Current Logged-in Student Profile -----baad main deelte kr dena agara kaam nhi kiya to
+// exports.getCurrentStudentProfile = async (req, res) => {
+//   try {
+//     // The JWT middleware (auth.js) already puts user info into req.user
+//     const studentId = req.user.id;
+
+//     const student = await StudentProfile.findById(studentId).select('-password');
+//     if (!student) {
+//       return res.status(404).json({ message: 'Student profile not found' });
+//     }
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Fetched current student profile successfully",
+//       data: student,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching current student profile:", error);
+//     res.status(500).json({ message: "Server error while fetching profile" });
+//   }
+// };
+
+//yaha tk

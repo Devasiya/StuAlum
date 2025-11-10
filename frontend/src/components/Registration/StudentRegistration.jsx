@@ -714,3 +714,5 @@ const StudentRegistration = () => {
 };
 
 export default StudentRegistration;
+
+

@@ -28,6 +28,13 @@ const AiToolsDashboard = ({onSidebarToggle}) => {
       icon: <PenTool size={32} />,
       path: "/aitools/AiEventGenerator",
       gradient: "from-[#a855f7] to-[#7e22ce]",
+    },
+    {
+      name:"AI Recommendation Alumni",
+      desc:"Get personalized alumni recommendations based on your profile and goals.",
+      icon: <PenTool size={32} />,
+      path: "/aitools/recommendations",
+      gradient: "from-[#a855f7] to-[#7e22ce]",
     }
   ];
 

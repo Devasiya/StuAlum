@@ -24,6 +24,7 @@ export const colleges = [
   { value: "BHU", label: "Banaras Hindu University (BHU), Varanasi" },
   { value: "Anna University", label: "Anna University, Chennai" },
   { value: "Jadavpur University", label: "Jadavpur University, Kolkata" },
+  {value:"BMSIT",label:"BMS Institute of Technology and Management, Bangalore" },
 ];
 
 
