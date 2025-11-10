@@ -345,7 +345,7 @@ const Navbar = ({ onSidebarToggle }) => {
         <span onClick={() => navigate("/")} className="cursor-pointer hover:text-purple-400 transition">Home</span>
         <span className="cursor-pointer hover:text-purple-400 transition">Language</span>
         <span className="cursor-pointer hover:text-purple-400 transition">Notifications</span>
-        <span className="cursor-pointer hover:text-purple-400 transition">Chat</span>
+        <span onClick={() => navigate("/messages")} className="cursor-pointer hover:text-purple-400 transition">Chat</span>
         <span onClick={() => navigate("/profile")} className="cursor-pointer hover:text-purple-400 transition">
           Profile
         </span>
