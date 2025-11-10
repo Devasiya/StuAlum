@@ -211,10 +211,7 @@ const Navbar = ({ onSidebarToggle }) => {
     navigate(`/signup/${role.toLowerCase()}`);
   };
 
-    const handleSignupOptionClick = (role) => {
-        setShowSignupDropdown(false);
-        navigate(`/signup/${role.toLowerCase()}`);
-    };
+    
 
   // Close dropdown on click outside
   useEffect(() => {
