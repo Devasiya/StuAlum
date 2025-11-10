@@ -41,10 +41,7 @@ const Navbar = ({ onSidebarToggle }) => {
     navigate(`/signup/${role.toLowerCase()}`);
   };
 
-  const handleLoginOptionClick = (role) => {
-    setShowLoginDropdown(false);
-    navigate(`/login/${role.toLowerCase()}`);
-  };
+    
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -54,8 +51,6 @@ const Navbar = ({ onSidebarToggle }) => {
         (loginDropdownRef.current && !loginDropdownRef.current.contains(e.target))
       ) {
         setShowSignupDropdown(false);
-        setShowLoginDropdown(false);
-      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -111,8 +106,6 @@ const Navbar = ({ onSidebarToggle }) => {
                 </button>
               ))}
             </div>
-          )}
-        </div>
 
         {/* Login */}
         <div ref={loginDropdownRef} className="relative">
