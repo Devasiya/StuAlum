@@ -110,6 +110,9 @@ uploads/
 .cache/
 .tmp/
 
+# Frontend directory
+frontend/node_modules
+
 # Lock files (optional, but often ignored)
 # package-lock.json
 # yarn.lock
