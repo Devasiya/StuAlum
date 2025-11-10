@@ -112,6 +112,8 @@ uploads/
 
 # Frontend directory
 frontend/node_modules
+frontend/.env
+BACKEND/.env
 
 # Lock files (optional, but often ignored)
 # package-lock.json
